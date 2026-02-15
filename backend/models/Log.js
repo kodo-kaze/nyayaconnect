@@ -16,6 +16,12 @@ const logSchema = new mongoose.Schema({
   ipAddress: {
     type: String,
   },
+  previousValue: {
+    type: mongoose.Schema.Types.Mixed,
+  },
+  newValue: {
+    type: mongoose.Schema.Types.Mixed,
+  },
 }, {
   timestamps: true,
 });

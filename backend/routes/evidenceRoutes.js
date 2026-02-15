@@ -11,14 +11,19 @@ const upload = multer();
 
 // @desc    Upload evidence
 // @route   POST /evidence/upload
-// @access  Private (Police, Lawyer)
-router.post('/upload', protect, authorize('POLICE', 'LAWYER', 'ADMIN'), upload.single('file'), async (req, res) => {
+// @access  Private (Police, Lawyer, Admin, Citizen)
+router.post('/upload', protect, authorize('POLICE', 'LAWYER', 'ADMIN', 'CITIZEN'), upload.single('file'), async (req, res) => {
   const { caseId } = req.body;
 
   try {
     const caseItem = await Case.findById(caseId);
     if (!caseItem) {
         return res.status(404).json({ message: 'Case not found' });
+    }
+
+    // If role is Citizen, ensure they created the case
+    if (req.user.role === 'CITIZEN' && caseItem.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Not authorized to upload to this case' });
     }
 
     // Check if any existing evidence for this case is locked (or if case itself is locked)

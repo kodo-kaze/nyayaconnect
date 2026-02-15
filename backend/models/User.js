@@ -25,6 +25,20 @@ const userSchema = new mongoose.Schema({
     enum: ['CITIZEN', 'POLICE', 'LAWYER', 'JUDGE', 'ADMIN'],
     default: 'CITIZEN',
   },
+  registrationNumber: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  accountStatus: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'SUSPENDED'],
+    default: 'APPROVED', // Defaulting to APPROVED for existing/citizen logic, but will be PENDING for new police/lawyers
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
   verified: {
     type: Boolean,
     default: false,

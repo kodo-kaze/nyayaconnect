@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #1e3a8a;
+  --color-primary-dark: #1e3a8a;
+  --color-secondary: #64748b;
+  --color-accent: #b45309;
+  --color-accent-teal: #0d9488;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-danger: #ef4444;
+  --color-success: #10b981;
+
+  --font-sans: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-slate-900 font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-primary;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-blue-900 focus:ring-primary;
+  }
+
+  .btn-secondary {
+    @apply bg-surface border border-slate-200 text-slate-700 hover:bg-slate-50 focus:ring-slate-500;
+  }
+
+  .card {
+    @apply bg-surface rounded-lg border border-slate-200 shadow-sm overflow-hidden;
+  }
+
+  .input-field {
+    @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all;
+  }
+}

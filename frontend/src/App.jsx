@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CitizenDashboard from './pages/CitizenDashboard';
@@ -8,6 +9,7 @@ import PoliceDashboard from './pages/PoliceDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import JudgeDashboard from './pages/JudgeDashboard';
 import LawyerDashboard from './pages/LawyerDashboard';
+import NotFound from './pages/NotFound';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles }) => {
@@ -29,35 +31,46 @@ function App() {
           
           <Route path="/citizen" element={
             <ProtectedRoute roles={['CITIZEN']}>
-              <CitizenDashboard />
+              <Layout>
+                <CitizenDashboard />
+              </Layout>
             </ProtectedRoute>
           } />
           
           <Route path="/police" element={
             <ProtectedRoute roles={['POLICE']}>
-              <PoliceDashboard />
+              <Layout>
+                <PoliceDashboard />
+              </Layout>
             </ProtectedRoute>
           } />
 
           <Route path="/lawyer" element={
             <ProtectedRoute roles={['LAWYER']}>
-              <LawyerDashboard />
+              <Layout>
+                <LawyerDashboard />
+              </Layout>
             </ProtectedRoute>
           } />
 
           <Route path="/judge" element={
             <ProtectedRoute roles={['JUDGE']}>
-              <JudgeDashboard />
+              <Layout>
+                <JudgeDashboard />
+              </Layout>
             </ProtectedRoute>
           } />
 
           <Route path="/admin" element={
             <ProtectedRoute roles={['ADMIN']}>
-              <AdminDashboard />
+              <Layout>
+                <AdminDashboard />
+              </Layout>
             </ProtectedRoute>
           } />
 
           <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </AuthProvider>

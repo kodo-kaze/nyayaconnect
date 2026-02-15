@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Case = require('../models/Case');
+const Log = require('../models/Log');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const auditLogger = require('../middleware/auditMiddleware');
 
-// @desc    Get all users
-// @route   GET /admin/users
-// @access  Private (Admin)
+// 1. USER MANAGEMENT
+// @desc    Get all users for management
 router.get('/users', protect, authorize('ADMIN'), async (req, res) => {
   try {
     const users = await User.find({}).select('-password');
@@ -17,39 +17,247 @@ router.get('/users', protect, authorize('ADMIN'), async (req, res) => {
   }
 });
 
-// @desc    Approve or Reject a case
-// @route   PUT /admin/approveCase/:id
-// @access  Private (Admin)
-router.put('/approveCase/:id', protect, authorize('ADMIN'), auditLogger('APPROVE_CASE'), async (req, res) => {
-  const { approvalStatus } = req.body;
-
-  if (!['approved', 'rejected'].includes(approvalStatus)) {
-    return res.status(400).json({ message: 'Invalid approval status' });
-  }
-
+// @desc    Update user account status (Approve/Suspend)
+router.put('/users/status/:id', protect, authorize('ADMIN'), async (req, res) => {
+  const { accountStatus, isActive } = req.body;
   try {
-    const caseItem = await Case.findById(req.params.id);
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (caseItem) {
-      caseItem.approvalStatus = approvalStatus;
-      // If approved, we might want to keep status as 'filed'. If rejected, maybe 'closed'?
-      // For now, just update approvalStatus.
-      const updatedCase = await caseItem.save();
-      res.json(updatedCase);
-    } else {
-      res.status(404).json({ message: 'Case not found' });
-    }
+    const prevValue = { accountStatus: user.accountStatus, isActive: user.isActive };
+    user.accountStatus = accountStatus !== undefined ? accountStatus : user.accountStatus;
+    user.isActive = isActive !== undefined ? isActive : user.isActive;
+    
+    await user.save();
+    
+    // Manual log for user management
+    await Log.create({
+        userId: req.user._id,
+        action: 'UPDATE_USER_STATUS',
+        ipAddress: req.ip,
+        previousValue: prevValue,
+        newValue: { accountStatus: user.accountStatus, isActive: user.isActive }
+    });
+
+    res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// @desc    Assign Judge to case (Proxy to case route if needed, or here)
-// @route   PUT /admin/assignJudge
-// @access  Private (Admin)
-router.put('/assignJudge', protect, authorize('ADMIN'), async (req, res) => {
-    // Logic can be shared with caseRoutes assign
-    res.status(501).json({ message: 'Use /cases/assign/:id instead' });
+const { generateCaseReport } = require('../utils/pdfGenerator');
+
+// ... (keep 1. USER MANAGEMENT as is)
+
+// 2. COMPLAINT VERIFICATION
+// @desc    Verify complaint (Approve/Reject/NeedInfo)
+router.put('/verifyCase/:id', protect, authorize('ADMIN'), auditLogger('VERIFY_CASE'), async (req, res) => {
+  const { action, reason, jurisdiction, courtroomName, priorityLevel, legalClassification, accused, complainant, incident } = req.body;
+  try {
+    const caseItem = await Case.findById(req.params.id);
+    if (!caseItem) return res.status(404).json({ message: 'Case not found' });
+
+    if (action === 'APPROVE') {
+      caseItem.status = 'REGISTERED';
+      caseItem.caseNumber = `CN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      caseItem.registrationDate = new Date();
+      caseItem.jurisdiction = jurisdiction;
+      caseItem.courtroomName = courtroomName;
+      caseItem.priorityLevel = priorityLevel || 'Normal';
+      caseItem.legalClassification = legalClassification;
+      caseItem.accused = accused;
+      caseItem.complainant = complainant;
+      
+      // Merge incident info if provided
+      if (incident) {
+          caseItem.incidentDate = incident.date;
+          caseItem.incidentTime = incident.time;
+          caseItem.incidentLocation = incident.location;
+      }
+    } else if (action === 'REJECT') {
+      caseItem.status = 'REJECTED';
+      caseItem.rejectionReason = reason;
+    } else if (action === 'NEED_INFO') {
+      caseItem.status = 'NEED_MORE_INFO';
+    }
+
+    await caseItem.save();
+    res.json(caseItem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @desc    Download Case Registration Report (PDF)
+router.get('/report/:id', protect, async (req, res) => {
+    try {
+        const caseItem = await Case.findById(req.params.id)
+            .populate('createdBy', 'name phone')
+            .populate('assignedPolice', 'name')
+            .populate('assignedJudge', 'name');
+
+        if (!caseItem) return res.status(404).json({ message: 'Case not found' });
+
+        // Fetch evidence for this case
+        const Evidence = require('../models/Evidence');
+        const evidence = await Evidence.find({ caseId: caseItem._id });
+        
+        // Attach evidence to caseItem for the generator
+        const caseData = caseItem.toObject();
+        caseData.evidence = evidence;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Case_Report_${caseItem.caseNumber}.pdf`);
+
+        generateCaseReport(caseData, res);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 3. CASE ASSIGNMENT (Update existing)
+router.put('/assign/:id', protect, authorize('ADMIN'), auditLogger('ASSIGN_AUTHORITIES'), async (req, res) => {
+    const { assignedPolice, assignedJudge, publicProsecutor } = req.body;
+    try {
+      const caseItem = await Case.findById(req.params.id);
+      if (!caseItem) return res.status(404).json({ message: 'Case not found' });
+  
+      if (caseItem.status === 'TRIAL') {
+          return res.status(403).json({ message: 'Cannot reassign after trial has begun' });
+      }
+
+      caseItem.assignedPolice = assignedPolice || caseItem.assignedPolice;
+      caseItem.assignedJudge = assignedJudge || caseItem.assignedJudge;
+      caseItem.publicProsecutor = publicProsecutor || caseItem.publicProsecutor;
+      
+      if (caseItem.assignedPolice && caseItem.assignedJudge) {
+          caseItem.status = 'ASSIGNED';
+      }
+
+      await caseItem.save();
+      res.json(caseItem);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+// 4. SCHEDULING
+router.post('/schedule/:id', protect, authorize('ADMIN'), auditLogger('SCHEDULE_HEARING'), async (req, res) => {
+  const { date, purpose } = req.body;
+  try {
+    const caseItem = await Case.findById(req.params.id);
+    if (!caseItem) return res.status(404).json({ message: 'Case not found' });
+
+    caseItem.hearings.push({ date, purpose });
+    caseItem.status = 'SCHEDULED';
+
+    await caseItem.save();
+    res.json(caseItem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 5. AI OVERRIDE
+router.put('/aiOverride/:id', protect, authorize('ADMIN'), auditLogger('AI_OVERRIDE'), async (req, res) => {
+    const { category, urgencyScore, reason } = req.body;
+    try {
+      const caseItem = await Case.findById(req.params.id);
+      if (!caseItem) return res.status(404).json({ message: 'Case not found' });
+  
+      caseItem.aiOverrides = {
+          category,
+          urgencyScore,
+          reason,
+          adminId: req.user._id
+      };
+      caseItem.category = category; // Apply the override
+  
+      await caseItem.save();
+      res.json(caseItem);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+});
+
+// 6. WORKLOAD MONITORING
+// @desc    Get workload (active cases and hearings) for all officials
+router.get('/workload', protect, authorize('ADMIN'), async (req, res) => {
+    try {
+        const officials = await User.find({ role: { $in: ['POLICE', 'JUDGE'] } }).select('name role');
+        
+        const workload = await Promise.all(officials.map(async (off) => {
+            const query = off.role === 'POLICE' ? { assignedPolice: off._id } : { assignedJudge: off._id };
+            // Define active statuses
+            const activeStatuses = ['REGISTERED', 'ASSIGNED', 'SCHEDULED', 'INVESTIGATING', 'TRIAL', 'NEED_MORE_INFO'];
+            const activeCases = await Case.find({ ...query, status: { $in: activeStatuses } });
+            
+            // For judges, also count scheduled hearings
+            let hearingCount = 0;
+            if (off.role === 'JUDGE') {
+                activeCases.forEach(c => {
+                    if (c.hearings && c.hearings.length > 0) {
+                        hearingCount += c.hearings.filter(h => h.date && new Date(h.date) >= new Date()).length;
+                    }
+                });
+            }
+
+            return {
+                id: off._id,
+                name: off.name,
+                role: off.role,
+                caseCount: activeCases.length,
+                upcomingHearings: hearingCount,
+                cases: activeCases.map(c => ({ id: c._id, title: c.title, caseNumber: c.caseNumber }))
+            };
+        }));
+
+        res.json(workload);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 7. AI AUTO-ASSIGN
+// @desc    Automatically assign personnel based on AI category and workload
+router.put('/autoAssign/:id', protect, authorize('ADMIN'), auditLogger('AI_AUTO_ASSIGN'), async (req, res) => {
+    try {
+        const caseItem = await Case.findById(req.params.id);
+        if (!caseItem) return res.status(404).json({ message: 'Case not found' });
+
+        // Logic: Find the official with the least workload in the relevant role
+        const getLeastBusy = async (role) => {
+            const officials = await User.find({ role, accountStatus: 'APPROVED' });
+            let bestMatch = null;
+            let minWork = Infinity;
+
+            const activeStatuses = ['REGISTERED', 'ASSIGNED', 'SCHEDULED', 'INVESTIGATING', 'TRIAL', 'NEED_MORE_INFO'];
+
+            for (const off of officials) {
+                const count = await Case.countDocuments({ 
+                    [role === 'POLICE' ? 'assignedPolice' : 'assignedJudge']: off._id,
+                    status: { $in: activeStatuses }
+                });
+                if (count < minWork) {
+                    minWork = count;
+                    bestMatch = off._id;
+                }
+            }
+            return bestMatch;
+        };
+
+        caseItem.assignedPolice = await getLeastBusy('POLICE');
+        caseItem.assignedJudge = await getLeastBusy('JUDGE');
+        
+        if (caseItem.assignedPolice && caseItem.assignedJudge) {
+            caseItem.status = 'ASSIGNED';
+        }
+
+        await caseItem.save();
+        res.json(caseItem);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 });
 
 module.exports = router;

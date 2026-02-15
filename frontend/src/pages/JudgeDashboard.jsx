@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Gavel, Shield, Info, FileText } from 'lucide-react';
+import { 
+  Gavel, 
+  Shield, 
+  FileText, 
+  User, 
+  MapPin, 
+  XCircle, 
+  CheckCircle,
+  ChevronRight,
+  Scale,
+  Sparkles,
+  BookOpen,
+  Calendar,
+  AlertCircle
+} from 'lucide-react';
+import Badge from '../components/Badge';
 
 const JudgeDashboard = () => {
   const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rejectionMode, setRejectionMode] = useState(false);
+  const [officialNotes, setOfficialNotes] = useState('');
+  const [insights, setInsights] = useState({});
+  const [fetchingInsight, setFetchingInsight] = useState({});
 
   useEffect(() => {
     fetchCases();
@@ -13,7 +32,9 @@ const JudgeDashboard = () => {
 
   const fetchCases = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/cases/my');
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
+      const response = await axios.get('http://localhost:5000/cases/my', config);
       setCases(response.data);
     } catch (error) {
       console.error('Error fetching cases:', error);
@@ -22,103 +43,302 @@ const JudgeDashboard = () => {
     }
   };
 
-  const closeCase = async (id) => {
+  const handleStatusUpdate = async (id, status) => {
     try {
-      await axios.put(`http://localhost:5000/cases/status/${id}`, { status: 'closed' });
-      fetchCases();
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
+      await axios.put(`http://localhost:5000/cases/status/${id}`, { 
+          status,
+          officialNotes: officialNotes || `Judicial Decision: ${status}`
+      }, config);
+      
+      setRejectionMode(false);
+      setOfficialNotes('');
       setSelectedCase(null);
+      fetchCases();
     } catch (error) {
-      console.error('Error closing case:', error);
+      console.error('Error updating case:', error);
+    }
+  };
+
+  const getLegalInsight = async (caseId, description) => {
+    setFetchingInsight(prev => ({ ...prev, [caseId]: true }));
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
+      const response = await axios.post('http://localhost:5000/ai/legalInsight', { 
+        complaint_text: description 
+      }, config);
+      setInsights(prev => ({ ...prev, [caseId]: response.data.legal_insight }));
+    } catch (error) {
+      console.error('Error fetching insight:', error);
+    } finally {
+      setFetchingInsight(prev => ({ ...prev, [caseId]: false }));
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-6">
-      <div className="w-1/3 bg-white shadow rounded-lg overflow-hidden">
-        <div className="p-4 bg-gray-50 border-b">
-          <h2 className="text-xl font-bold flex items-center">
-            <Gavel className="mr-2" /> Pending Trials
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] gap-6">
+      {/* Sidebar: Case Roster */}
+      <div className="w-full lg:w-80 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden shrink-0">
+        <div className="p-4 bg-slate-50 border-b border-slate-200">
+          <h2 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-900">
+            <Scale className="h-4 w-4 text-primary" />
+            Judicial Bench
           </h2>
         </div>
-        <ul className="divide-y divide-gray-200">
+        
+        <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="p-4">Loading...</p>
+            <div className="p-8 text-center animate-pulse space-y-4">
+              <div className="h-12 bg-slate-100 rounded-md"></div>
+              <div className="h-12 bg-slate-100 rounded-md"></div>
+              <div className="h-12 bg-slate-100 rounded-md"></div>
+            </div>
           ) : cases.length === 0 ? (
-            <p className="p-4 text-gray-500">No trials assigned.</p>
+            <div className="p-12 text-center text-slate-400">
+              <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-20" />
+              <p className="text-xs font-medium">No Active Trials</p>
+            </div>
           ) : (
-            cases.map((c) => (
-              <li 
-                key={c._id} 
-                className={`p-4 cursor-pointer hover:bg-blue-50 ${selectedCase?._id === c._id ? 'bg-blue-50' : ''}`}
-                onClick={() => setSelectedCase(c)}
-              >
-                <p className="font-medium">{c.title}</p>
-                <p className="text-xs text-gray-500">Filed on: {new Date(c.createdAt).toLocaleDateString()}</p>
-              </li>
-            ))
+            <ul className="divide-y divide-slate-100">
+              {cases.map((c) => (
+                <li 
+                  key={c._id} 
+                  className={`p-4 cursor-pointer transition-all hover:bg-slate-50 ${
+                    selectedCase?._id === c._id ? 'bg-blue-50/50 border-r-4 border-primary' : ''
+                  }`}
+                  onClick={() => { setSelectedCase(c); setRejectionMode(false); }}
+                >
+                  <div className="flex justify-between items-start gap-2 mb-1">
+                      <p className={`text-sm font-bold truncate ${selectedCase?._id === c._id ? 'text-primary' : 'text-slate-900'}`}>
+                        {c.title}
+                      </p>
+                      <Badge status={c.status}>{c.status}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] font-mono text-slate-400 uppercase">
+                      {c.caseNumber || 'REG-PENDING'}
+                    </span>
+                    <span className="text-[10px] text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-        </ul>
+        </div>
       </div>
 
-      <div className="w-2/3">
+      {/* Main Content: Case Details */}
+      <div className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto">
         {selectedCase ? (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex justify-between items-start mb-6">
-              <h2 className="text-2xl font-bold">{selectedCase.title}</h2>
-              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-bold uppercase">
-                {selectedCase.status}
-              </span>
+          <div className="p-8 space-y-8 animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-slate-100 pb-8">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge status="trial">HIGH COURT REGISTRY</Badge>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Official Record No: {selectedCase.caseNumber}</span>
+                </div>
+                <h2 className="text-3xl font-bold tracking-tight text-slate-900 leading-tight">
+                  {selectedCase.title}
+                </h2>
+                <div className="flex items-center gap-4 text-sm text-slate-500 mt-2">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Filed on {new Date(selectedCase.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Scale className="h-4 w-4" />
+                    Trial Phase: {selectedCase.status.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end gap-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Urgency Index</p>
+                <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-md">
+                  <AlertCircle className={`h-4 w-4 ${selectedCase.aiUrgencyScore > 7 ? 'text-rose-400' : 'text-emerald-400'}`} />
+                  <span className="text-sm font-bold">{selectedCase.aiUrgencyScore}/10</span>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-bold flex items-center mb-2 text-blue-800">
-                  <Info className="mr-2 w-4 h-4" /> AI Insight
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="card p-6 bg-slate-50 border-slate-100">
+                <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 flex items-center tracking-widest">
+                  <User size={14} className="mr-2 text-primary"/> Petitioner / Complainant
                 </h3>
-                <p className="text-sm text-blue-900">
-                  <strong>Predicted Category:</strong> {selectedCase.category || 'N/A'}<br/>
-                  <strong>Urgency Score:</strong> {selectedCase.aiUrgencyScore || 'N/A'}/5
-                </p>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-lg font-bold text-slate-900">{selectedCase.createdBy?.name || selectedCase.createdBy?.username || 'Verified Petitioner'}</p>
+                    <p className="text-xs text-slate-500 mt-1">Status: Registered Citizen</p>
+                  </div>
+                  <div className="pt-4 border-t border-slate-200">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Registered Address</p>
+                    <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                      {selectedCase.complainant?.address || 'Provided in sealed filing'}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold flex items-center mb-2">
-                  <Shield className="mr-2 w-4 h-4" /> Personnel
+
+              <div className="card p-6 bg-slate-50 border-slate-100">
+                <h3 className="text-xs font-bold text-slate-400 uppercase mb-4 flex items-center tracking-widest">
+                  <Shield size={14} className="mr-2 text-rose-600"/> Respondent / Accused
                 </h3>
-                <p className="text-sm text-gray-600">
-                  <strong>Police:</strong> {selectedCase.assignedPolice?.name || 'Unassigned'}<br/>
-                  <strong>Filer:</strong> {selectedCase.createdBy?.name}
-                </p>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-lg font-bold text-rose-900">
+                      {selectedCase.accused?.isUnknown ? 'IDENTIFICATION PENDING' : selectedCase.accused?.name}
+                    </p>
+                    <p className="text-xs text-rose-600/70 mt-1">Status: Primary Suspect</p>
+                  </div>
+                  <div className="pt-4 border-t border-slate-200">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Identifiers / Remarks</p>
+                    <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                      {selectedCase.accused?.identifiers || 'No identifying data provided'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="mb-8">
-              <h3 className="font-bold mb-2 flex items-center">
-                <FileText className="mr-2 w-5 h-5" /> Case Description
+            <div className="card p-6 bg-amber-50/50 border-amber-100">
+              <h3 className="text-xs font-bold text-amber-800 uppercase mb-4 flex items-center tracking-widest">
+                <MapPin size={14} className="mr-2"/> Incident Summary
               </h3>
-              <p className="text-gray-700 bg-gray-50 p-4 rounded border">
-                {selectedCase.description}
-              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700/60 uppercase">Incident Date</p>
+                  <p className="text-sm font-semibold text-amber-900">
+                    {selectedCase.incident?.date ? new Date(selectedCase.incident.date).toLocaleDateString() : (selectedCase.incidentDate ? new Date(selectedCase.incidentDate).toLocaleDateString() : 'N/A')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700/60 uppercase">Incident Time</p>
+                  <p className="text-sm font-semibold text-amber-900">{selectedCase.incident?.time || selectedCase.incidentTime || 'N/A'}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-[10px] font-bold text-amber-700/60 uppercase">Location</p>
+                  <p className="text-sm font-semibold text-amber-900">{selectedCase.incident?.location || selectedCase.incidentLocation || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700/60 uppercase">Legal Severity</p>
+                  <Badge status={selectedCase.legalClassification?.severityLevel || 'info'}>
+                    {selectedCase.legalClassification?.severityLevel || 'PENDING'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-amber-700/60 uppercase">Bail Status</p>
+                  <p className="text-sm font-bold text-amber-900">{selectedCase.legalClassification?.isBailable ? 'BAILABLE' : 'NON-BAILABLE'}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end space-x-4">
-              <button
-                className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                onClick={() => setSelectedCase(null)}
-              >
-                Close View
-              </button>
-              <button
-                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-bold"
-                onClick={() => closeCase(selectedCase._id)}
-              >
-                Issue Verdict & Close Case
-              </button>
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center tracking-wide">
+                <BookOpen className="mr-2 w-5 h-5 text-primary" /> Case Narrative & Evidence Summary
+              </h3>
+              <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+                <p className="text-base text-slate-700 leading-relaxed italic indent-8">
+                  "{selectedCase.description}"
+                </p>
+              </div>
+            </div>
+
+            {/* AI Assistant Section for Judge */}
+            <div className="card p-8 border-primary/20 bg-primary/[0.02] ring-1 ring-primary/10">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">NyayaAI Decision Support</h4>
+                    <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Neural Legal Engine</p>
+                  </div>
+                </div>
+                {!insights[selectedCase._id] && (
+                  <button
+                    onClick={() => getLegalInsight(selectedCase._id, selectedCase.description)}
+                    disabled={fetchingInsight[selectedCase._id]}
+                    className="btn btn-primary text-xs"
+                  >
+                    {fetchingInsight[selectedCase._id] ? 'Analyzing Jurisprudence...' : 'Review Case with AI'}
+                  </button>
+                )}
+              </div>
+              
+              {insights[selectedCase._id] && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="p-6 rounded-lg bg-white border border-primary/10 shadow-sm">
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      {insights[selectedCase._id]}
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-4 text-center">
+                    Note: AI insights are intended for judicial assistance only. Final decisions rests solely with the presiding judge.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between gap-6">
+              {rejectionMode ? (
+                <div className="w-full space-y-4 bg-rose-50 p-6 rounded-xl border border-rose-100 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex items-center gap-2 text-rose-800">
+                      <XCircle className="h-5 w-5" />
+                      <h4 className="font-bold">Formal Dismissal Grounds</h4>
+                    </div>
+                    <textarea 
+                        className="input-field bg-white" 
+                        rows="4" 
+                        placeholder="State the legal framework and specific reasons for dismissing this case from the docket..."
+                        value={officialNotes}
+                        onChange={(e) => setOfficialNotes(e.target.value)}
+                    ></textarea>
+                    <div className="flex gap-4">
+                        <button onClick={() => setRejectionMode(false)} className="btn btn-secondary flex-1">Abort Dismissal</button>
+                        <button 
+                            onClick={() => handleStatusUpdate(selectedCase._id, 'CLOSED')}
+                            disabled={!officialNotes}
+                            className="btn btn-primary bg-rose-600 hover:bg-rose-700 flex-1"
+                        >Execute Formal Dismissal</button>
+                    </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                      className="btn btn-secondary text-rose-600 border-rose-200 hover:bg-rose-50"
+                      onClick={() => setRejectionMode(true)}
+                  >
+                      <XCircle size={18} className="mr-2" /> Dismiss Case Filing
+                  </button>
+                  <div className="flex gap-4">
+                    <button
+                        className="btn btn-secondary"
+                        onClick={() => alert('Order generation in progress...')}
+                    >
+                        <FileText size={18} className="mr-2" /> Issue Interim Order
+                    </button>
+                    <button
+                        className="btn btn-primary bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => handleStatusUpdate(selectedCase._id, 'CLOSED')}
+                    >
+                        <CheckCircle size={18} className="mr-2" /> Pronounce Final Verdict
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : (
-          <div className="h-full bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-500">
-            <Gavel className="w-16 h-16 mb-4 opacity-20" />
-            <p>Select a case from the list to view details</p>
+          <div className="h-full flex flex-col items-center justify-center text-slate-400 p-12 text-center">
+            <div className="h-24 w-24 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+              <Gavel className="w-12 h-12 opacity-10" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Judicial Review Portal</h3>
+            <p className="text-sm max-w-xs mt-2">Please select an assigned case from the bench on the left to review documentation and pronounce decisions.</p>
           </div>
         )}
       </div>

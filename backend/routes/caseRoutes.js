@@ -8,13 +8,46 @@ const auditLogger = require('../middleware/auditMiddleware');
 // @route   POST /cases/create
 // @access  Private (Citizen)
 router.post('/create', protect, authorize('CITIZEN', 'ADMIN'), auditLogger('CREATE_CASE'), async (req, res) => {
-  const { title, description } = req.body;
+  const { 
+    title, 
+    description, 
+    category, 
+    aiUrgencyScore,
+    incident,
+    accused,
+    complainant
+  } = req.body;
 
   try {
     const newCase = await Case.create({
       title,
       description,
       createdBy: req.user._id,
+      category,
+      aiUrgencyScore,
+      incidentDate: incident?.date,
+      incidentTime: incident?.time,
+      incidentLocation: incident?.location,
+      peopleInvolvedCount: incident?.peopleCount,
+      hasInjuryDamage: incident?.hasInjury,
+      accused: {
+        name: accused?.name,
+        address: accused?.address,
+        identifiers: accused?.identifiers,
+        isUnknown: accused?.isUnknown
+      },
+      complainant: {
+        address: complainant?.address,
+        idProofType: complainant?.idProofType,
+        idProofNumber: complainant?.idProofNumber,
+        relationshipToCase: complainant?.relationship
+      },
+      aiSuggestions: {
+          category: category,
+          urgencyScore: aiUrgencyScore,
+          recommendedDepartment: category
+      },
+      status: 'PENDING_VERIFICATION'
     });
 
     res.status(201).json(newCase);
@@ -34,17 +67,18 @@ router.get('/my', protect, async (req, res) => {
     if (role === 'CITIZEN') {
       query = { createdBy: req.user._id };
     } else if (role === 'POLICE') {
-      query = { assignedPolice: req.user._id, approvalStatus: 'approved' };
+      // Police see cases assigned to them that are beyond verification
+      query = { assignedPolice: req.user._id, status: { $nin: ['PENDING_VERIFICATION', 'REJECTED'] } };
     } else if (role === 'LAWYER') {
-      query = { assignedLawyers: req.user._id, approvalStatus: 'approved' };
+      query = { assignedLawyers: req.user._id, status: { $nin: ['PENDING_VERIFICATION', 'REJECTED'] } };
     } else if (role === 'JUDGE') {
-      query = { assignedJudge: req.user._id, approvalStatus: 'approved' };
+      query = { assignedJudge: req.user._id, status: { $ne: 'REJECTED' } };
     } else if (role === 'ADMIN') {
       query = {}; // Admin can see all
     }
 
     const cases = await Case.find(query)
-      .populate('createdBy', 'name email')
+      .populate('createdBy', 'name email phone')
       .populate('assignedPolice', 'name email')
       .populate('assignedJudge', 'name email');
     res.json(cases);
@@ -83,6 +117,13 @@ router.put('/status/:id', protect, authorize('POLICE', 'JUDGE', 'ADMIN'), auditL
 
     if (caseItem) {
       caseItem.status = req.body.status || caseItem.status;
+      if (req.body.officialNotes) {
+          caseItem.officialNotes = req.body.officialNotes;
+      }
+      if (req.body.status === 'REJECTED') {
+          caseItem.rejectedBy = req.user._id;
+          caseItem.rejectionReason = req.body.officialNotes;
+      }
       const updatedCase = await caseItem.save();
       res.json(updatedCase);
     } else {
