@@ -8,10 +8,23 @@ const Login = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '', otp: '', newPassword: '' });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
+
+  const handleResendOTP = async () => {
+    setResending(true);
+    try {
+      await axios.post(`${API_BASE_URL}/auth/resend-otp`, { email: credentials.email });
+      alert('A new security code has been sent to your device.');
+    } catch (err) {
+      setError('Failed to resend code.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,6 +122,17 @@ const Login = () => {
                   </p>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Secure OTP Code</label>
                   <input name="otp" type="text" required placeholder="000000" className="input-field h-14 text-center text-2xl tracking-[0.5em] font-bold" maxLength="6" value={credentials.otp} onChange={handleChange} />
+                  
+                  <div className="mt-4 text-center">
+                    <button 
+                      type="button" 
+                      onClick={handleResendOTP} 
+                      disabled={resending}
+                      className="text-xs font-bold text-primary hover:underline uppercase tracking-widest disabled:opacity-50"
+                    >
+                      {resending ? 'Sending...' : 'Did not receive code? Resend'}
+                    </button>
+                  </div>
                 </div>
               )}
 
