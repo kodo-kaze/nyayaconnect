@@ -24,7 +24,8 @@ const Register = () => {
     try {
       const type = role === 'CITIZEN' ? 'citizen' : 'official';
       const data = { ...formData, role };
-      await register(data, type);
+      const res = await register(data, type);
+      if (res.simulatedOTP) alert(`[DEMO ONLY] Registration OTP is: ${res.simulatedOTP}`);
       setStep('SUCCESS');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');

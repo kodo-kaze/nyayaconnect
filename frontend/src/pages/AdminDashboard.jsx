@@ -423,13 +423,22 @@ const AdminDashboard = () => {
           {activeTab === 'users' && (
             <div className="card overflow-hidden">
               <div className="bg-slate-50 border-b border-slate-100 p-4 flex items-center justify-between">
-                <div className="relative w-72">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input type="text" placeholder="Search authorities..." className="input-field pl-10 h-9 text-xs" />
+                <div className="flex items-center gap-4">
+                  <div className="relative w-72">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input type="text" placeholder="Search authorities..." className="input-field pl-10 h-9 text-xs" />
+                  </div>
+                  <button className="btn btn-secondary text-xs h-9">
+                    <Filter className="h-3.5 w-3.5 mr-2" />
+                    Filter Roles
+                  </button>
                 </div>
-                <button className="btn btn-secondary text-xs h-9">
-                  <Filter className="h-3.5 w-3.5 mr-2" />
-                  Filter Roles
+                <button 
+                  onClick={() => setModalType('createJudge')}
+                  className="btn btn-primary text-xs h-9 bg-primary"
+                >
+                  <Gavel className="h-3.5 w-3.5 mr-2" />
+                  Appoint New Judge
                 </button>
               </div>
               <table className="min-w-full divide-y divide-slate-200">
@@ -591,6 +600,48 @@ const AdminDashboard = () => {
                   Confirm Registration & Issue Case Number
                 </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Appoint Judge Modal */}
+      {modalType === 'createJudge' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl p-8 border border-slate-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-900">Appoint High Court Judge</h2>
+              <button onClick={() => setModalType(null)}><X className="h-5 w-5 text-slate-400" /></button>
+            </div>
+            
+            <form className="space-y-4" onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const config = { headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user')).token}` } };
+                await axios.post(`${API_BASE_URL}/admin/users/create-judge`, formData, config);
+                alert('Judicial appointment successful');
+                setModalType(null);
+                setFormData({});
+                fetchData();
+              } catch (err) { alert(err.response?.data?.message || 'Appointment failed'); }
+            }}>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Full Legal Name</label>
+                <input type="text" required className="input-field" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Official Email</label>
+                <input type="email" required className="input-field" onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Secure Phone</label>
+                <input type="text" required className="input-field" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Temporary Password</label>
+                <input type="password" required className="input-field" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              </div>
+              <button type="submit" className="w-full btn btn-primary h-12 mt-4 bg-primary">Confirm Appointment</button>
+            </form>
           </div>
         </div>
       )}

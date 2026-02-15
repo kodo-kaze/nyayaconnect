@@ -6,6 +6,7 @@ const CaseTimeline = ({ status }) => {
     { id: 'filed', label: 'Filed', icon: FileText },
     { id: 'registered', label: 'Registered', icon: CheckCircle2 },
     { id: 'investigating', label: 'Investigating', icon: Search },
+    { id: 'report_submitted', label: 'Police Report', icon: FileText },
     { id: 'trial', label: 'Trial', icon: Gavel },
     { id: 'closed', label: 'Closed', icon: CheckCircle2 },
   ];

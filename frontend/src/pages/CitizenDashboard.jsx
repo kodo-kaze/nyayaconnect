@@ -11,7 +11,8 @@ import {
   ExternalLink,
   Sparkles,
   UploadCloud,
-  ShieldCheck
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import Badge from '../components/Badge';
 import CaseTimeline from '../components/CaseTimeline';
@@ -410,6 +411,21 @@ const CitizenDashboard = () => {
                   <p className="text-sm text-slate-600 leading-relaxed line-clamp-3 mb-6">
                     {c.description}
                   </p>
+
+                  {/* Suspects Section */}
+                  {c.suspects && c.suspects.length > 0 && (
+                    <div className="mb-6 space-y-3">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Identified Suspects</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {c.suspects.map((s, i) => (
+                          <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-100 text-rose-700">
+                            <Users className="h-3 w-3" />
+                            <span className="text-xs font-bold">{s.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
                       <div className="flex gap-3">

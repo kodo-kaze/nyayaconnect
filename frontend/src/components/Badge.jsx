@@ -5,11 +5,15 @@ const Badge = ({ children, status }) => {
     switch (status?.toLowerCase()) {
       case 'filed':
       case 'registered':
+      case 'supporting':
         return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'investigating':
       case 'pending':
+      case 'background':
         return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'trial':
+      case 'report_submitted':
+      case 'critical':
         return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'closed':
       case 'approved':

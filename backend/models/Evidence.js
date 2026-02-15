@@ -1,35 +1,17 @@
 const mongoose = require('mongoose');
 
 const evidenceSchema = new mongoose.Schema({
-  caseId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Case',
-    required: true,
+  caseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Case', required: true },
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  fileHash: { type: String, required: true },
+  filePath: { type: String, required: true },
+  fileType: { type: String },
+  relevance: { 
+    type: String, 
+    enum: ['CRITICAL', 'SUPPORTING', 'BACKGROUND', 'UNSPECIFIED'],
+    default: 'UNSPECIFIED'
   },
-  uploadedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
-  fileHash: {
-    type: String,
-    required: true,
-  },
-  filePath: {
-    type: String,
-    required: true,
-  },
-  fileType: {
-    type: String,
-  },
-  locked: {
-    type: Boolean,
-    default: false,
-  },
-}, {
-  timestamps: true,
-});
+  locked: { type: Boolean, default: false },
+}, { timestamps: true });
 
-const Evidence = mongoose.model('Evidence', evidenceSchema);
-
-module.exports = Evidence;
+module.exports = mongoose.model('Evidence', evidenceSchema);
