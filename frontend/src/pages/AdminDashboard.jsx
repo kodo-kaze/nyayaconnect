@@ -29,6 +29,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('verification');
   const [selectedCase, setSelectedCase] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [modalType, setModalType] = useState(null);
   const [formData, setFormData] = useState({});
 
@@ -444,31 +445,31 @@ const AdminDashboard = () => {
                   {users.map(u => (
                     <tr key={u._id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold">
+                        <button 
+                          onClick={() => setSelectedUser(u)}
+                          className="flex items-center gap-3 text-left group"
+                        >
+                          <div className="h-8 w-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold group-hover:bg-primary group-hover:text-white transition-colors">
                             {(u.name || u.username || 'U').substring(0,2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="text-sm font-bold text-slate-900">{u.name || u.username || 'Anonymous'}</div>
+                            <div className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{u.name || u.username || 'Anonymous'}</div>
                             <div className="text-[10px] text-slate-500">{u.email}</div>
                           </div>
-                        </div>
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge status={u.role}>{u.role}</Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className={`h-1.5 w-1.5 rounded-full ${u.accountStatus === 'APPROVED' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-                          <span className="text-xs font-medium text-slate-700">{u.accountStatus}</span>
-                        </div>
+                        <Badge status={u.status}>{u.status}</Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button 
-                          onClick={() => handleCaseAction(u._id, 'USER_STATUS', { accountStatus: u.accountStatus === 'APPROVED' ? 'SUSPENDED' : 'APPROVED' })}
-                          className={`text-xs font-bold ${u.accountStatus === 'APPROVED' ? 'text-rose-600 hover:text-rose-700' : 'text-emerald-600 hover:text-emerald-700'}`}
+                          onClick={() => handleCaseAction(u._id, 'USER_STATUS', { status: u.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' })}
+                          className={`text-xs font-bold ${u.status === 'ACTIVE' ? 'text-rose-600 hover:text-rose-700' : 'text-emerald-600 hover:text-emerald-700'}`}
                         >
-                          {u.accountStatus === 'APPROVED' ? 'Revoke Access' : 'Restore Access'}
+                          {u.status === 'ACTIVE' ? 'Revoke Access' : 'Restore Access'}
                         </button>
                       </td>
                     </tr>
@@ -636,6 +637,102 @@ const AdminDashboard = () => {
                     className="btn btn-primary flex-1"
                 >Update Class</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="text-lg font-bold text-slate-900">Authority Profile</h3>
+              <button onClick={() => setSelectedUser(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold mb-4 ring-4 ring-primary/5">
+                  {(selectedUser.name || 'U').substring(0,2).toUpperCase()}
+                </div>
+                <h4 className="text-xl font-bold text-slate-900">{selectedUser.name}</h4>
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge status={selectedUser.role}>{selectedUser.role}</Badge>
+                  <Badge status={selectedUser.status}>{selectedUser.status}</Badge>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Official Email</p>
+                    <p className="text-sm font-medium text-slate-700 truncate">{selectedUser.email}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Phone Number</p>
+                    <p className="text-sm font-medium text-slate-700">{selectedUser.phone}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500 font-medium">System ID</span>
+                    <span className="text-[10px] font-mono font-bold text-slate-400">{selectedUser._id}</span>
+                  </div>
+                  
+                  {selectedUser.role === 'POLICE' && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 font-medium">Badge ID</span>
+                      <span className="text-sm font-bold text-blue-600">{selectedUser.badgeID || 'Not provided'}</span>
+                    </div>
+                  )}
+
+                  {selectedUser.role === 'LAWYER' && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 font-medium">Bar Council No.</span>
+                      <span className="text-sm font-bold text-amber-600">{selectedUser.barCouncilNo || 'Not provided'}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500 font-medium">Registration Date</span>
+                    <span className="text-xs font-bold text-slate-700">
+                      {new Date(selectedUser.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-500 font-medium">Security Audit</span>
+                    <div className="flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase">
+                      <ShieldCheck className="h-3 w-3" />
+                      Encrypted Identity
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="flex-1 btn btn-secondary h-11"
+              >
+                Close Profile
+              </button>
+              <button 
+                onClick={() => {
+                  handleCaseAction(selectedUser._id, 'USER_STATUS', { status: selectedUser.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE' });
+                  setSelectedUser(null);
+                }}
+                className={`flex-1 btn h-11 text-white font-bold ${
+                  selectedUser.status === 'ACTIVE' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {selectedUser.status === 'ACTIVE' ? 'Revoke Access' : 'Restore Access'}
+              </button>
             </div>
           </div>
         </div>

@@ -2,89 +2,95 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Log = require('../models/Log');
+const auditLog = require('../middleware/auditMiddleware');
 const { protect } = require('../middleware/authMiddleware');
 
-// Generate JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
-};
+const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-// @desc    Register new user
-// @route   POST /auth/register
-// @access  Public
-router.post('/register', async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
-
+// 1. REGISTRATION GATES
+// Citizen: Self-reg + OTP required for ACTIVE
+router.post('/register/citizen', auditLog('CITIZEN_REG'), async (req, res) => {
+  const { name, email, phone, password } = req.body;
   try {
-    // Prevent registration as ADMIN
-    if (role === 'ADMIN') {
-      return res.status(403).json({ message: 'Public registration of Admin is not allowed' });
-    }
-
-    const userExists = await User.findOne({ $or: [{ email }, { phone }] });
-
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
     const user = await User.create({
-      name,
-      email,
-      phone,
-      password,
-      role,
+      name, email, phone, password,
+      role: 'CITIZEN',
+      status: 'PENDING' // Becomes ACTIVE after OTP verify
     });
-
-    if (user) {
-      res.status(201).json({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    // In real app, trigger SMS service here
+    user.otp = { code: '123456', expiresAt: Date.now() + 600000 };
+    await user.save();
+    res.status(201).json({ message: 'OTP sent to phone', userId: user._id });
+  } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
-// @desc    Authenticate a user
-// @route   POST /auth/login
-// @access  Public
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
+// Police/Lawyer: Verification required
+router.post('/register/official', auditLog('OFFICIAL_REG'), async (req, res) => {
+  const { name, email, phone, password, role, badgeID, barCouncilNo, idCardImage } = req.body;
+  if (!['POLICE', 'LAWYER'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
   try {
-    const user = await User.findOne({ email });
-
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid email or password' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    const user = await User.create({
+      name, email, phone, password, role,
+      badgeID, barCouncilNo, idCardImage,
+      status: 'PENDING'
+    });
+    res.status(201).json({ message: 'Verification request submitted to Admin', userId: user._id });
+  } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
-// @desc    Get user data
-// @route   GET /auth/me
-// @access  Private
-router.get('/me', protect, async (req, res) => {
-  res.status(200).json(req.user);
+// 2. LOGIN GATES
+router.post('/login', auditLog('LOGIN_ATTEMPT'), async (req, res) => {
+  const { email, password, otp, deviceFingerprint } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user || !(await user.matchPassword(password))) {
+    return res.status(401).json({ message: 'Invalid credentials' });
+  }
+
+  // Role-Specific Login Rules
+  switch (user.role) {
+    case 'ADMIN':
+      return res.json({ token: generateToken(user._id), role: user.role });
+
+    case 'JUDGE':
+      if (user.isFirstLogin) return res.status(200).json({ step: 'PWD_RESET', userId: user._id });
+      if (!otp) return res.status(200).json({ step: 'OTP_REQUIRED' }); // 2FA Mandatory
+      break;
+
+    case 'POLICE':
+      if (user.status !== 'ACTIVE') return res.status(403).json({ message: 'Official account not yet approved by Admin' });
+      if (!otp) return res.status(200).json({ step: 'OTP_REQUIRED' }); // OTP Mandatory
+      break;
+
+    case 'CITIZEN':
+      if (user.status !== 'ACTIVE' && !otp) return res.status(200).json({ step: 'VERIFICATION_REQUIRED' });
+      break;
+  }
+
+  // Handle OTP verification if provided
+  if (otp) {
+    if (user.otp.code !== otp || user.otp.expiresAt < Date.now()) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+    user.status = 'ACTIVE';
+    user.otp.isVerified = true;
+  }
+
+  // Device Tracking for Officials
+  if (['JUDGE', 'POLICE', 'ADMIN'].includes(user.role)) {
+    if (deviceFingerprint && !user.deviceFingerprints.includes(deviceFingerprint)) {
+      user.deviceFingerprints.push(deviceFingerprint);
+    }
+  }
+
+  user.lastLogin = Date.now();
+  await user.save();
+
+  res.json({
+    token: generateToken(user._id),
+    user: { id: user._id, name: user.name, role: user.role, status: user.status }
+  });
 });
 
 module.exports = router;
