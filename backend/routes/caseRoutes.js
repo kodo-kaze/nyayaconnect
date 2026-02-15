@@ -104,6 +104,7 @@ router.get('/:id', protect, async (req, res) => {
       res.status(404).json({ message: 'Case not found' });
     }
   } catch (error) {
+    console.error('Error fetching case by ID:', error);
     res.status(500).json({ message: error.message });
   }
 });

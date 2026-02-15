@@ -23,7 +23,7 @@ router.post('/register/citizen', auditLog('CITIZEN_REG'), async (req, res) => {
     });
     
     console.log(`[SMS Simulation] OTP for ${phone}: ${otpCode}`);
-    res.status(201).json({ message: 'OTP sent to phone', userId: user._id });
+    res.status(201).json({ message: 'OTP sent to phone', userId: user._id, simulatedOTP: otpCode });
   } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
@@ -54,7 +54,22 @@ router.post('/resend-otp', async (req, res) => {
   res.json({ message: 'New OTP sent successfully' });
 });
 
-// 3. UNIFIED LOGIN GATE
+// 3. PASSWORD RESET (For first login)
+router.post('/reset-password', async (req, res) => {
+  const { userId, newPassword } = req.body;
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.password = newPassword;
+    user.isFirstLogin = false;
+    await user.save();
+
+    res.json({ message: 'Password updated successfully. Please login with your new credentials.' });
+  } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
+// 4. UNIFIED LOGIN GATE
 router.post('/login', auditLog('LOGIN_ATTEMPT'), async (req, res) => {
   const { email, password, otp, deviceFingerprint } = req.body;
   const user = await User.findOne({ email });
@@ -94,7 +109,7 @@ router.post('/login', auditLog('LOGIN_ATTEMPT'), async (req, res) => {
       user.otp = { code: otpCode, expiresAt: Date.now() + 600000, isVerified: false };
       await user.save();
       console.log(`[SMS Simulation] Login OTP for ${user.name}: ${otpCode}`);
-      return res.json({ step });
+      return res.json({ step, simulatedOTP: otpCode });
     }
   }
 
@@ -110,7 +125,11 @@ router.post('/login', auditLog('LOGIN_ATTEMPT'), async (req, res) => {
 
   res.json({
     token: generateToken(user._id),
-    user: { id: user._id, name: user.name, role: user.role, status: user.status }
+    user: { id: user._id, name: user.name, role: user.role, status: user.status },
+    id: user._id,
+    name: user.name,
+    role: user.role,
+    status: user.status
   });
 });
 

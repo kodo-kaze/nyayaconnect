@@ -21,6 +21,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/cases', require('./routes/caseRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
+app.use('/police', require('./routes/policeRoutes'));
 app.use('/evidence', require('./routes/evidenceRoutes'));
 app.use('/ai', require('./routes/aiRoutes'));
 

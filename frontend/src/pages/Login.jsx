@@ -5,6 +5,7 @@ import { Scale, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, KeyRound, Smar
 
 const Login = () => {
   const [step, setStep] = useState('LOGIN'); // 'LOGIN', 'OTP', 'PWD_RESET'
+  const [userId, setUserId] = useState(null);
   const [credentials, setCredentials] = useState({ email: '', password: '', otp: '', newPassword: '' });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,11 +32,21 @@ const Login = () => {
     setIsSubmitting(true);
     setError('');
     try {
+      if (step === 'PWD_RESET') {
+        await axios.post(`${API_BASE_URL}/auth/reset-password`, { userId, newPassword: credentials.newPassword });
+        alert('Password updated. Please sign in with your new credentials.');
+        setStep('LOGIN');
+        setIsSubmitting(false);
+        return;
+      }
+
       const res = await login(credentials);
       
       if (res.step === 'OTP_REQUIRED' || res.step === 'VERIFICATION_REQUIRED') {
+        if (res.simulatedOTP) alert(`[DEMO ONLY] Your Security Code is: ${res.simulatedOTP}`);
         setStep('OTP');
       } else if (res.step === 'PWD_RESET') {
+        setUserId(res.userId);
         setStep('PWD_RESET');
       } else if (res.token) {
         // Redirect based on role

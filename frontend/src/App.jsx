@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import CitizenDashboard from './pages/CitizenDashboard';
 import PoliceDashboard from './pages/PoliceDashboard';
+import InvestigationPanel from './pages/InvestigationPanel';
+import CaseInvestigation from './pages/CaseInvestigation';
 import AdminDashboard from './pages/AdminDashboard';
 import JudgeDashboard from './pages/JudgeDashboard';
 import LawyerDashboard from './pages/LawyerDashboard';
@@ -41,6 +43,22 @@ function App() {
             <ProtectedRoute roles={['POLICE']}>
               <Layout>
                 <PoliceDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/police/investigation" element={
+            <ProtectedRoute roles={['POLICE']}>
+              <Layout>
+                <InvestigationPanel />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/police/investigation/:id" element={
+            <ProtectedRoute roles={['POLICE']}>
+              <Layout>
+                <CaseInvestigation />
               </Layout>
             </ProtectedRoute>
           } />

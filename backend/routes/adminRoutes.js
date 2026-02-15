@@ -8,6 +8,24 @@ const auditLog = require('../middleware/auditMiddleware');
 const { generateCaseReport } = require('../utils/pdfGenerator');
 
 // 1. USER MANAGEMENT
+// @desc    Create Judge Account (Admin Only)
+router.post('/users/create-judge', protect, authorize('ADMIN'), auditLog('CREATE_JUDGE_ACCOUNT'), async (req, res) => {
+  const { name, email, phone, password } = req.body;
+  try {
+    const userExists = await User.findOne({ $or: [{ email }, { phone }] });
+    if (userExists) return res.status(400).json({ message: 'User with this email/phone already exists' });
+
+    const judge = await User.create({
+      name, email, phone, password,
+      role: 'JUDGE',
+      status: 'ACTIVE',
+      isFirstLogin: true // Forces password reset on first login
+    });
+
+    res.status(201).json({ message: 'Judge account created successfully', id: judge._id });
+  } catch (err) { res.status(400).json({ message: err.message }); }
+});
+
 // @desc    Get all users for management
 router.get('/users', protect, authorize('ADMIN'), async (req, res) => {
   try {
