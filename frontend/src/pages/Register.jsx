@@ -38,6 +38,7 @@ const Register = () => {
     { value: 'CITIZEN', label: 'Citizen', icon: User, desc: 'File complaints & track cases' },
     { value: 'POLICE', label: 'Police', icon: ShieldCheck, desc: 'Manage investigations' },
     { value: 'LAWYER', label: 'Lawyer', icon: Briefcase, desc: 'Legal representation' },
+    { value: 'JUDGE', label: 'Judge', icon: Gavel, desc: 'Judicial decisions' },
   ];
 
   if (step === 'SUCCESS') {
@@ -49,8 +50,8 @@ const Register = () => {
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Registration Submitted</h2>
           <p className="text-slate-500 mb-8">
-            {role === 'CITIZEN' 
-              ? 'Please proceed to login and verify your phone number via OTP.' 
+            {role === 'CITIZEN'
+              ? 'Please proceed to login and verify your phone number via OTP.'
               : 'Your official credentials have been sent for Admin verification. You will be notified once approved.'}
           </p>
           <Link to="/login" className="btn btn-primary w-full h-12">Return to Sign In</Link>
@@ -72,15 +73,14 @@ const Register = () => {
           <p className="text-slate-400 leading-relaxed mb-8">
             Securely register your profile to access specialized judicial tools and case management services.
           </p>
-          
+
           <div className="space-y-4">
             {roles.map((r) => (
               <button
                 key={r.value}
                 onClick={() => setRole(r.value)}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
-                  role === r.value ? 'border-primary bg-primary/10 text-white' : 'border-white/5 bg-white/5 text-slate-400 hover:bg-white/10'
-                }`}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${role === r.value ? 'border-primary bg-primary/10 text-white' : 'border-white/5 bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
               >
                 <r.icon className={`h-6 w-6 ${role === r.value ? 'text-primary' : 'text-slate-500'}`} />
                 <div>
@@ -150,6 +150,13 @@ const Register = () => {
                 <div className="md:col-span-2 bg-amber-50/50 p-6 rounded-xl border border-amber-100 animate-in slide-in-from-top-4">
                   <label className="block text-xs font-bold text-amber-700 uppercase tracking-widest mb-1.5">Bar Council Registration No.</label>
                   <input name="barCouncilNo" type="text" required className="input-field h-12 bg-white" placeholder="e.g. BAR/2024/001" value={formData.barCouncilNo} onChange={handleChange} />
+                </div>
+              )}
+
+              {role === 'JUDGE' && (
+                <div className="md:col-span-2 bg-purple-50/50 p-6 rounded-xl border border-purple-100 animate-in slide-in-from-top-4">
+                  <label className="block text-xs font-bold text-purple-700 uppercase tracking-widest mb-1.5">Judicial Identification No.</label>
+                  <input name="badgeID" type="text" required className="input-field h-12 bg-white" placeholder="e.g. JUD-2024-001" value={formData.badgeID} onChange={handleChange} />
                 </div>
               )}
             </div>
