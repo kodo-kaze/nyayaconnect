@@ -7,10 +7,30 @@ const CitizenDashboard = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ title: '', description: '' });
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState({}); // { caseId: insightText }
+  const [fetchingInsight, setFetchingInsight] = useState({});
 
   useEffect(() => {
     fetchCases();
   }, []);
+
+  const getLegalInsight = async (caseId, description) => {
+    setFetchingInsight(prev => ({ ...prev, [caseId]: true }));
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const config = {
+        headers: { Authorization: `Bearer ${storedUser.token}` }
+      };
+      const response = await axios.post('http://localhost:5000/ai/legalInsight', { 
+        complaint_text: description 
+      }, config);
+      setInsights(prev => ({ ...prev, [caseId]: response.data.legal_insight }));
+    } catch (error) {
+      console.error('Error fetching insight:', error);
+    } finally {
+      setFetchingInsight(prev => ({ ...prev, [caseId]: false }));
+    }
+  };
 
   const fetchCases = async () => {
     try {
@@ -119,12 +139,42 @@ const CitizenDashboard = () => {
                     <div>
                       <p className="text-sm font-medium text-blue-600 truncate">{c.title}</p>
                       <p className="text-sm text-gray-500">{c.description.substring(0, 100)}...</p>
+                      <div className="mt-2 flex space-x-4 text-xs text-gray-400">
+                        {c.assignedPolice && (
+                          <span>Police: {c.assignedPolice.name}</span>
+                        )}
+                        {c.assignedJudge && (
+                          <span>Judge: {c.assignedJudge.name}</span>
+                        )}
+                      </div>
+                      
+                      {insights[c._id] ? (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800">
+                          <p className="font-bold mb-1">AI Legal Insight:</p>
+                          {insights[c._id]}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => getLegalInsight(c._id, c.description)}
+                          disabled={fetchingInsight[c._id]}
+                          className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center"
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          {fetchingInsight[c._id] ? 'Fetching AI Insight...' : 'Get AI Legal Insight'}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="ml-2 flex-shrink-0 flex">
+                  <div className="ml-2 flex-shrink-0 flex flex-col items-end space-y-1">
                     <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                       ${c.status === 'closed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
                       {c.status.toUpperCase()}
+                    </p>
+                    <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${c.approvalStatus === 'approved' ? 'bg-green-100 text-green-800' : 
+                        c.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' : 
+                        'bg-yellow-100 text-yellow-800'}`}>
+                      {c.approvalStatus ? c.approvalStatus.toUpperCase() : 'PENDING'}
                     </p>
                   </div>
                 </div>

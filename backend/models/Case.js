@@ -17,6 +17,11 @@ const caseSchema = new mongoose.Schema({
     enum: ['filed', 'investigating', 'trial', 'closed'],
     default: 'filed',
   },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

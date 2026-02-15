@@ -18,6 +18,11 @@ router.post('/register', async (req, res) => {
   const { name, email, phone, password, role } = req.body;
 
   try {
+    // Prevent registration as ADMIN
+    if (role === 'ADMIN') {
+      return res.status(403).json({ message: 'Public registration of Admin is not allowed' });
+    }
+
     const userExists = await User.findOne({ $or: [{ email }, { phone }] });
 
     if (userExists) {

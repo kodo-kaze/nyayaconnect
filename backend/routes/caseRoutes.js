@@ -34,16 +34,19 @@ router.get('/my', protect, async (req, res) => {
     if (role === 'CITIZEN') {
       query = { createdBy: req.user._id };
     } else if (role === 'POLICE') {
-      query = { assignedPolice: req.user._id };
+      query = { assignedPolice: req.user._id, approvalStatus: 'approved' };
     } else if (role === 'LAWYER') {
-      query = { assignedLawyers: req.user._id };
+      query = { assignedLawyers: req.user._id, approvalStatus: 'approved' };
     } else if (role === 'JUDGE') {
-      query = { assignedJudge: req.user._id };
+      query = { assignedJudge: req.user._id, approvalStatus: 'approved' };
     } else if (role === 'ADMIN') {
       query = {}; // Admin can see all
     }
 
-    const cases = await Case.find(query).populate('createdBy', 'name email');
+    const cases = await Case.find(query)
+      .populate('createdBy', 'name email')
+      .populate('assignedPolice', 'name email')
+      .populate('assignedJudge', 'name email');
     res.json(cases);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -99,9 +102,13 @@ router.put('/assign/:id', protect, authorize('ADMIN'), async (req, res) => {
     const caseItem = await Case.findById(req.params.id);
 
     if (caseItem) {
-      caseItem.assignedPolice = assignedPolice || caseItem.assignedPolice;
-      caseItem.assignedJudge = assignedJudge || caseItem.assignedJudge;
-      if (assignedLawyers) {
+      if (assignedPolice !== undefined) {
+        caseItem.assignedPolice = assignedPolice || null;
+      }
+      if (assignedJudge !== undefined) {
+        caseItem.assignedJudge = assignedJudge || null;
+      }
+      if (assignedLawyers !== undefined) {
         caseItem.assignedLawyers = assignedLawyers;
       }
       

@@ -29,4 +29,17 @@ router.post('/summarizeCase', protect, async (req, res) => {
   }
 });
 
+// @desc    Get deep legal insight
+// @route   POST /ai/legalInsight
+// @access  Private
+router.post('/legalInsight', protect, async (req, res) => {
+  try {
+    const { complaint_text } = req.body;
+    const response = await axios.post('http://localhost:8000/get-legal-insight', { complaint_text });
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ message: 'AI Service error' });
+  }
+});
+
 module.exports = router;
