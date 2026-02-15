@@ -8,10 +8,7 @@ CORS(app)
 
 client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key=os.environ.get(
-        "NVIDIA_API_KEY",
-        "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",
-    ),
+    api_key=os.environ.get("NVIDIA_API_KEY"),
 )
 
 
@@ -80,4 +77,5 @@ def get_legal_insight():
 
 
 if __name__ == "__main__":
-    app.run(port=8000, debug=True)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(port=port)

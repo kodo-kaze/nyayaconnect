@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Badge from '../components/Badge';
 import CaseTimeline from '../components/CaseTimeline';
+import { API_BASE_URL } from '../api/config';
 
 const CitizenDashboard = () => {
   const [cases, setCases] = useState([]);
@@ -41,7 +42,7 @@ const CitizenDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const response = await axios.get(`http://localhost:5000/evidence/${caseId}`, config);
+      const response = await axios.get(`${API_BASE_URL}/evidence/${caseId}`, config);
       setCaseEvidence(prev => ({ ...prev, [caseId]: response.data }));
     } catch (error) {
       console.error('Error fetching evidence:', error);
@@ -64,7 +65,7 @@ const CitizenDashboard = () => {
           Authorization: `Bearer ${storedUser.token}` 
         }
       };
-      await axios.post('http://localhost:5000/evidence/upload', fd, config);
+      await axios.post(`${API_BASE_URL}/evidence/upload`, fd, config);
       fetchEvidence(caseId);
     } catch (error) {
       console.error('Upload error:', error);
@@ -78,7 +79,7 @@ const CitizenDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const response = await axios.post('http://localhost:5000/ai/legalInsight', { 
+      const response = await axios.post(`${API_BASE_URL}/ai/legalInsight`, { 
         complaint_text: description 
       }, config);
       setInsights(prev => ({ ...prev, [caseId]: response.data.legal_insight }));
@@ -91,7 +92,7 @@ const CitizenDashboard = () => {
 
   const fetchCases = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/cases/my');
+      const response = await axios.get(`${API_BASE_URL}/cases/my`);
       setCases(response.data);
       // Fetch evidence for all cases
       response.data.forEach(c => fetchEvidence(c._id));
@@ -105,11 +106,11 @@ const CitizenDashboard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const aiRes = await axios.post('http://localhost:5000/ai/analyzeComplaint', { 
+      const aiRes = await axios.post(`${API_BASE_URL}/ai/analyzeComplaint`, { 
         complaint_text: formData.description 
       });
       
-      await axios.post('http://localhost:5000/cases/create', {
+      await axios.post(`${API_BASE_URL}/cases/create`, {
         ...formData,
         category: aiRes.data.category,
         aiUrgencyScore: aiRes.data.urgency_score

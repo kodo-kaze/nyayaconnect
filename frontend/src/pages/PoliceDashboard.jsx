@@ -16,6 +16,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import Badge from '../components/Badge';
+import { API_BASE_URL } from '../api/config';
 
 const PoliceDashboard = () => {
   const [cases, setCases] = useState([]);
@@ -32,7 +33,7 @@ const PoliceDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const response = await axios.get('http://localhost:5000/cases/my', config);
+      const response = await axios.get(`${API_BASE_URL}/cases/my`, config);
       setCases(response.data);
     } catch (error) {
       console.error('Error fetching cases:', error);
@@ -45,7 +46,7 @@ const PoliceDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      await axios.put(`http://localhost:5000/cases/status/${id}`, { 
+      await axios.put(`${API_BASE_URL}/cases/status/${id}`, { 
           status,
           officialNotes: status === 'REJECTED' ? officialNotes : 'Started Investigation'
       }, config);

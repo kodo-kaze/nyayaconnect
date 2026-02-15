@@ -16,6 +16,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import Badge from '../components/Badge';
+import { API_BASE_URL } from '../api/config';
 
 const JudgeDashboard = () => {
   const [cases, setCases] = useState([]);
@@ -34,7 +35,7 @@ const JudgeDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const response = await axios.get('http://localhost:5000/cases/my', config);
+      const response = await axios.get(`${API_BASE_URL}/cases/my`, config);
       setCases(response.data);
     } catch (error) {
       console.error('Error fetching cases:', error);
@@ -47,7 +48,7 @@ const JudgeDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      await axios.put(`http://localhost:5000/cases/status/${id}`, { 
+      await axios.put(`${API_BASE_URL}/cases/status/${id}`, { 
           status,
           officialNotes: officialNotes || `Judicial Decision: ${status}`
       }, config);
@@ -66,7 +67,7 @@ const JudgeDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const response = await axios.post('http://localhost:5000/ai/legalInsight', { 
+      const response = await axios.post(`${API_BASE_URL}/ai/legalInsight`, { 
         complaint_text: description 
       }, config);
       setInsights(prev => ({ ...prev, [caseId]: response.data.legal_insight }));

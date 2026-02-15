@@ -44,7 +44,7 @@ router.post('/upload', protect, authorize('POLICE', 'LAWYER', 'ADMIN', 'CITIZEN'
       contentType: req.file.mimetype,
     });
 
-    const response = await axios.post('http://localhost:9000/upload', formData, {
+    const response = await axios.post(`${process.env.EVIDENCE_SERVICE_URL}/upload`, formData, {
       headers: {
         ...formData.getHeaders(),
       },

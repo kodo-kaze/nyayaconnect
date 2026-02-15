@@ -9,7 +9,7 @@ const axios = require('axios');
 router.post('/analyzeComplaint', protect, async (req, res) => {
   try {
     const { complaint_text } = req.body;
-    const response = await axios.post('http://localhost:8000/predict-category', { complaint_text });
+    const response = await axios.post(`${process.env.AI_SERVICE_URL}/predict-category`, { complaint_text });
     res.json(response.data);
   } catch (error) {
     res.status(500).json({ message: 'AI Service error' });
@@ -22,7 +22,7 @@ router.post('/analyzeComplaint', protect, async (req, res) => {
 router.post('/summarizeCase', protect, async (req, res) => {
   try {
     const { full_case_text } = req.body;
-    const response = await axios.post('http://localhost:8000/summarize', { full_case_text });
+    const response = await axios.post(`${process.env.AI_SERVICE_URL}/summarize`, { full_case_text });
     res.json(response.data);
   } catch (error) {
     res.status(500).json({ message: 'AI Service error' });
@@ -35,7 +35,7 @@ router.post('/summarizeCase', protect, async (req, res) => {
 router.post('/legalInsight', protect, async (req, res) => {
   try {
     const { complaint_text } = req.body;
-    const response = await axios.post('http://localhost:8000/get-legal-insight', { complaint_text });
+    const response = await axios.post(`${process.env.AI_SERVICE_URL}/get-legal-insight`, { complaint_text });
     res.json(response.data);
   } catch (error) {
     res.status(500).json({ message: 'AI Service error' });

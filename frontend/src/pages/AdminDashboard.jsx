@@ -19,6 +19,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import Badge from '../components/Badge';
+import { API_BASE_URL } from '../api/config';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -42,8 +43,8 @@ const AdminDashboard = () => {
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
       
       const [usersRes, casesRes] = await Promise.all([
-        axios.get('http://localhost:5000/admin/users', config),
-        axios.get('http://localhost:5000/cases/my', config)
+        axios.get(`${API_BASE_URL}/admin/users`, config),
+        axios.get(`${API_BASE_URL}/cases/my`, config)
       ]);
       setUsers(usersRes.data);
       setCases(casesRes.data);
@@ -60,7 +61,7 @@ const AdminDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const res = await axios.get('http://localhost:5000/admin/workload', config);
+      const res = await axios.get(`${API_BASE_URL}/admin/workload`, config);
       setWorkload(res.data);
     } catch (error) {
       console.error('Error fetching workload:', error);
@@ -71,7 +72,7 @@ const AdminDashboard = () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const res = await axios.get(`http://localhost:5000/evidence/${caseId}`, config);
+      const res = await axios.get(`${API_BASE_URL}/evidence/${caseId}`, config);
       setCaseEvidence(prev => ({ ...prev, [caseId]: res.data }));
     } catch (error) {
       console.error('Error fetching evidence:', error);
@@ -84,13 +85,13 @@ const AdminDashboard = () => {
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
       
       if (action === 'VERIFY') {
-        await axios.put(`http://localhost:5000/admin/verifyCase/${caseId}`, data, config);
+        await axios.put(`${API_BASE_URL}/admin/verifyCase/${caseId}`, data, config);
       } else if (action === 'ASSIGN') {
-        await axios.put(`http://localhost:5000/admin/assign/${caseId}`, data, config);
+        await axios.put(`${API_BASE_URL}/admin/assign/${caseId}`, data, config);
       } else if (action === 'AUTO_ASSIGN') {
-        await axios.put(`http://localhost:5000/admin/autoAssign/${caseId}`, {}, config);
+        await axios.put(`${API_BASE_URL}/admin/autoAssign/${caseId}`, {}, config);
       } else if (action === 'USER_STATUS') {
-        await axios.put(`http://localhost:5000/admin/users/status/${caseId}`, data, config);
+        await axios.put(`${API_BASE_URL}/admin/users/status/${caseId}`, data, config);
       }
 
       setModalType(null);
@@ -106,7 +107,7 @@ const AdminDashboard = () => {
   const handleDownloadReport = async (caseId, caseNumber) => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
-      const response = await axios.get(`http://localhost:5000/admin/report/${caseId}`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/report/${caseId}`, {
         headers: { Authorization: `Bearer ${storedUser.token}` },
         responseType: 'blob'
       });

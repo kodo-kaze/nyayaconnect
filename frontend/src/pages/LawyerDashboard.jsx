@@ -15,6 +15,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import Badge from '../components/Badge';
+import { API_BASE_URL } from '../api/config';
 
 const LawyerDashboard = () => {
   const [cases, setCases] = useState([]);
@@ -27,7 +28,7 @@ const LawyerDashboard = () => {
 
   const fetchCases = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/cases/my');
+      const response = await axios.get(`${API_BASE_URL}/cases/my`);
       setCases(response.data);
     } catch (error) {
       console.error('Error fetching cases:', error);
