@@ -20,22 +20,21 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
-    const userData = response.data;
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
-    return userData;
+  const login = async (credentials) => {
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials);
+    if (response.data.token) {
+      const userData = response.data;
+      setUser(userData.user || userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
+    }
+    return response.data; // Return full response to handle steps (OTP, etc.)
   };
 
-  const register = async (userData) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/register`, userData);
-    const data = response.data;
-    setUser(data);
-    localStorage.setItem('user', JSON.stringify(data));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    return data;
+  const register = async (userData, type = 'citizen') => {
+    const endpoint = type === 'citizen' ? '/auth/register/citizen' : '/auth/register/official';
+    const response = await axios.post(`${API_BASE_URL}${endpoint}`, userData);
+    return response.data;
   };
 
   const logout = () => {

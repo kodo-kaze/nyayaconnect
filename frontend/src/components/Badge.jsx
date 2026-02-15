@@ -13,9 +13,11 @@ const Badge = ({ children, status }) => {
         return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'closed':
       case 'approved':
+      case 'active':
         return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'rejected':
       case 'danger':
+      case 'suspended':
         return 'bg-rose-100 text-rose-700 border-rose-200';
       default:
         return 'bg-slate-100 text-slate-700 border-slate-200';

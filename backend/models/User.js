@@ -2,66 +2,50 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  phone: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { 
+    type: String, 
+    enum: ['CITIZEN', 'POLICE', 'LAWYER', 'JUDGE', 'ADMIN'], 
+    required: true 
   },
-  phone: {
-    type: String,
-    required: true,
-    unique: true,
+  status: { 
+    type: String, 
+    enum: ['PENDING', 'ACTIVE', 'REJECTED', 'SUSPENDED'], 
+    default: 'PENDING' 
   },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
+  
+  // Official Role Identifiers
+  badgeID: { type: String, sparse: true }, // Police
+  barCouncilNo: { type: String, sparse: true }, // Lawyer
+  idCardImage: { type: String }, // URL/Path to verification image
+  
+  // Verification & Security
+  isFirstLogin: { type: Boolean, default: true }, // For Judges/Officials
+  otp: {
+    code: String,
+    expiresAt: Date,
+    isVerified: { type: Boolean, default: false }
   },
-  password: {
-    type: String,
-    required: true,
-  },
-  role: {
-    type: String,
-    enum: ['CITIZEN', 'POLICE', 'LAWYER', 'JUDGE', 'ADMIN'],
-    default: 'CITIZEN',
-  },
-  registrationNumber: {
-    type: String,
-    unique: true,
-    sparse: true,
-  },
-  accountStatus: {
-    type: String,
-    enum: ['PENDING', 'APPROVED', 'SUSPENDED'],
-    default: 'APPROVED', // Defaulting to APPROVED for existing/citizen logic, but will be PENDING for new police/lawyers
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  verified: {
-    type: Boolean,
-    default: false,
-  },
-}, {
-  timestamps: true,
-});
+  
+  // Tracking
+  deviceFingerprints: [String],
+  lastLogin: Date,
+  
+  verifiedAt: Date,
+  verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
 
-// Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
-
-// Encrypt password using bcrypt
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    next();
-  }
-
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-const User = mongoose.model('User', userSchema);
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
-module.exports = User;
+module.exports = mongoose.model('User', userSchema);
