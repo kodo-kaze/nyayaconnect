@@ -5,7 +5,7 @@ const User = require('../models/User');
 const auditLog = require('../middleware/auditMiddleware');
 const { protect } = require('../middleware/authMiddleware');
 
-const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 // Helper: Generate Random 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();

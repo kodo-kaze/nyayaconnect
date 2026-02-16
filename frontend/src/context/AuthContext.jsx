@@ -24,11 +24,13 @@ export const AuthProvider = ({ children }) => {
     const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials);
     if (response.data.token) {
       const userData = response.data;
-      setUser(userData.user || userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+      // Ensure the user object in state has the token
+      const userWithToken = { ...(userData.user || userData), token: userData.token };
+      setUser(userWithToken);
+      localStorage.setItem('user', JSON.stringify(userWithToken));
       axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
     }
-    return response.data; // Return full response to handle steps (OTP, etc.)
+    return response.data;
   };
 
   const register = async (userData, type = 'citizen') => {

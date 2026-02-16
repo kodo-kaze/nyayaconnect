@@ -10,8 +10,19 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (user && step === 'LOGIN') {
+      const role = user.role;
+      if (role === 'ADMIN') navigate('/admin', { replace: true });
+      else if (role === 'JUDGE') navigate('/judge', { replace: true });
+      else if (role === 'POLICE') navigate('/police', { replace: true });
+      else if (role === 'LAWYER') navigate('/lawyer', { replace: true });
+      else navigate('/citizen', { replace: true });
+    }
+  }, [user, navigate, step]);
 
   const handleChange = (e) => setCredentials({ ...credentials, [e.target.name]: e.target.value });
 
