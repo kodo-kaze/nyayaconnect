@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
+import { API_BASE_URL } from '../api/config';
 import { useAuth } from '../context/AuthContext';
 import { Scale, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, KeyRound, Smartphone } from 'lucide-react';
 
