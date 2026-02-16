@@ -5,7 +5,7 @@ const User = require('../models/User');
 const auditLog = require('../middleware/auditMiddleware');
 const { protect } = require('../middleware/authMiddleware');
 
-const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 // Helper: Generate Random 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -21,7 +21,7 @@ router.post('/register/citizen', auditLog('CITIZEN_REG'), async (req, res) => {
       status: 'PENDING',
       otp: { code: otpCode, expiresAt: Date.now() + 600000 }
     });
-    
+
     console.log(`[SMS Simulation] OTP for ${phone}: ${otpCode}`);
     res.status(201).json({ message: 'OTP sent to phone', userId: user._id, simulatedOTP: otpCode });
   } catch (err) { res.status(400).json({ message: err.message }); }
@@ -29,7 +29,7 @@ router.post('/register/citizen', auditLog('CITIZEN_REG'), async (req, res) => {
 
 router.post('/register/official', auditLog('OFFICIAL_REG'), async (req, res) => {
   const { name, email, phone, password, role, badgeID, barCouncilNo, idCardImage } = req.body;
-  if (!['POLICE', 'LAWYER'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
+  if (!['POLICE', 'LAWYER', 'JUDGE'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
   try {
     const user = await User.create({
       name, email, phone, password, role,

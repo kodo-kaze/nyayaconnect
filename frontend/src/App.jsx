@@ -21,7 +21,18 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
-// Placeholder Dashboards
+// Root Redirect Component
+const RootRedirect = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" />;
+  
+  const role = user.role;
+  if (role === 'ADMIN') return <Navigate to="/admin" />;
+  if (role === 'JUDGE') return <Navigate to="/judge" />;
+  if (role === 'POLICE') return <Navigate to="/police" />;
+  if (role === 'LAWYER') return <Navigate to="/lawyer" />;
+  return <Navigate to="/citizen" />;
+};
 
 function App() {
   return (
@@ -87,7 +98,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
