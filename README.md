@@ -54,10 +54,6 @@ The platform follows a modular microservices approach for maximum scalability:
 
 ## 🔗 Links
 
-[![portfolio](https://img.shields.io/badge/my_portfolio-000?style=for-the-badge&logo=ko-fi&logoColor=white)](https://nyayaconnect.vercel.app/)
-[![linkedin](https://img.shields.io/badge/linkedin-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/your-profile)
-[![github](https://img.shields.io/badge/github-1DA1F2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/kodo-kaze/nyayaconnect)
-
 | Resource                    | Link                                                                |
 | :-------------------------- | :------------------------------------------------------------------ |
 | **Recruitment / Live Site** | [Click Here to View Live Demo 🚀](https://nyayaconnect.vercel.app/) |
