@@ -25,7 +25,9 @@ const JudgeDashboard = () => {
   const [rejectionMode, setRejectionMode] = useState(false);
   const [officialNotes, setOfficialNotes] = useState('');
   const [insights, setInsights] = useState({});
+  const [summaries, setSummaries] = useState({});
   const [fetchingInsight, setFetchingInsight] = useState({});
+  const [fetchingSummary, setFetchingSummary] = useState({});
 
   useEffect(() => {
     fetchCases();
@@ -33,9 +35,7 @@ const JudgeDashboard = () => {
 
   const fetchCases = async () => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
-      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const response = await axios.get(`${API_BASE_URL}/cases/my`, config);
+      const response = await axios.get(`${API_BASE_URL}/cases/my`);
       setCases(response.data);
     } catch (error) {
       console.error('Error fetching cases:', error);
@@ -46,12 +46,10 @@ const JudgeDashboard = () => {
 
   const handleStatusUpdate = async (id, status) => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
-      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
       await axios.put(`${API_BASE_URL}/cases/status/${id}`, { 
           status,
           officialNotes: officialNotes || `Judicial Decision: ${status}`
-      }, config);
+      });
       
       setRejectionMode(false);
       setOfficialNotes('');
@@ -65,16 +63,28 @@ const JudgeDashboard = () => {
   const getLegalInsight = async (caseId, description) => {
     setFetchingInsight(prev => ({ ...prev, [caseId]: true }));
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
-      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
       const response = await axios.post(`${API_BASE_URL}/ai/legalInsight`, { 
         complaint_text: description 
-      }, config);
+      });
       setInsights(prev => ({ ...prev, [caseId]: response.data.legal_insight }));
     } catch (error) {
       console.error('Error fetching insight:', error);
     } finally {
       setFetchingInsight(prev => ({ ...prev, [caseId]: false }));
+    }
+  };
+
+  const summarizeCase = async (caseId, description) => {
+    setFetchingSummary(prev => ({ ...prev, [caseId]: true }));
+    try {
+      const response = await axios.post(`${API_BASE_URL}/ai/summarizeCase`, { 
+        full_case_text: description 
+      });
+      setSummaries(prev => ({ ...prev, [caseId]: response.data.summary }));
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+    } finally {
+      setFetchingSummary(prev => ({ ...prev, [caseId]: false }));
     }
   };
 
@@ -259,29 +269,53 @@ const JudgeDashboard = () => {
                     <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Neural Legal Engine</p>
                   </div>
                 </div>
-                {!insights[selectedCase._id] && (
-                  <button
-                    onClick={() => getLegalInsight(selectedCase._id, selectedCase.description)}
-                    disabled={fetchingInsight[selectedCase._id]}
-                    className="btn btn-primary text-xs"
-                  >
-                    {fetchingInsight[selectedCase._id] ? 'Analyzing Jurisprudence...' : 'Review Case with AI'}
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  {!summaries[selectedCase._id] && (
+                    <button
+                      onClick={() => summarizeCase(selectedCase._id, selectedCase.description)}
+                      disabled={fetchingSummary[selectedCase._id]}
+                      className="btn btn-secondary text-xs"
+                    >
+                      {fetchingSummary[selectedCase._id] ? 'Summarizing...' : 'Summarize Case'}
+                    </button>
+                  )}
+                  {!insights[selectedCase._id] && (
+                    <button
+                      onClick={() => getLegalInsight(selectedCase._id, selectedCase.description)}
+                      disabled={fetchingInsight[selectedCase._id]}
+                      className="btn btn-primary text-xs"
+                    >
+                      {fetchingInsight[selectedCase._id] ? 'Analyzing Jurisprudence...' : 'Review Case with AI'}
+                    </button>
+                  )}
+                </div>
               </div>
               
-              {insights[selectedCase._id] && (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="p-6 rounded-lg bg-white border border-primary/10 shadow-sm">
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      {insights[selectedCase._id]}
+              <div className="space-y-4">
+                {summaries[selectedCase._id] && (
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="p-4 rounded-lg bg-amber-50/50 border border-amber-100">
+                      <h5 className="text-[10px] font-bold text-amber-800 uppercase mb-2">Executive Case Summary</h5>
+                      <p className="text-sm text-slate-700 leading-relaxed italic">
+                        {summaries[selectedCase._id]}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {insights[selectedCase._id] && (
+                  <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="p-6 rounded-lg bg-white border border-primary/10 shadow-sm">
+                      <h5 className="text-[10px] font-bold text-primary uppercase mb-2">Detailed Legal Insights</h5>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        {insights[selectedCase._id]}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-4 text-center">
+                      Note: AI insights are intended for judicial assistance only. Final decisions rests solely with the presiding judge.
                     </p>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-4 text-center">
-                    Note: AI insights are intended for judicial assistance only. Final decisions rests solely with the presiding judge.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between gap-6">
