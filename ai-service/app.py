@@ -4,6 +4,9 @@ from openai import OpenAI
 import os
 import json
 import re
+from dotenv import load_dotenv
+
+load_dotenv() # Load variables from .env
 
 app = Flask(__name__)
 CORS(app)
@@ -13,12 +16,23 @@ client = OpenAI(
     api_key=os.environ.get("NVIDIA_API_KEY"),
 )
 
+import sys
+
 def get_ai_completion(prompt):
-    if not client.api_key:
-        print("Error: NVIDIA_API_KEY not set")
+    api_key = os.environ.get("NVIDIA_API_KEY")
+    if not api_key:
+        print("Error: NVIDIA_API_KEY environment variable not found")
+        sys.stdout.flush()
         return None
+    
+    # Re-initialize client with the current environment variable to be safe
+    temp_client = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=api_key,
+    )
+    
     try:
-        completion = client.chat.completions.create(
+        completion = temp_client.chat.completions.create(
             model="meta/llama-3.1-405b-instruct",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
@@ -28,7 +42,8 @@ def get_ai_completion(prompt):
         )
         return completion.choices[0].message.content
     except Exception as e:
-        print(f"Error calling AI API: {e}")
+        print(f"Error calling AI API with key {api_key[:10]}...: {e}")
+        sys.stdout.flush()
         return None
 
 def extract_json(text):
@@ -92,10 +107,15 @@ def summarize():
     data = request.json
     text = data.get("full_case_text", "")
 
-    prompt = f"Provide a concise summary of this legal case text: {text}"
+    prompt = f"""As a senior judicial assistant, provide a concise, factual, and neutral executive summary of the following legal complaint for a presiding judge. 
+Focus on the core allegation, the parties involved, and the specific relief or action requested.
+Limit the summary to 3-4 sentences.
+
+Complaint Text: {text}"""
+    
     summary = get_ai_completion(prompt)
 
-    return jsonify({"summary": summary or "Summary unavailable."})
+    return jsonify({"summary": summary or "Summary unavailable due to AI service timeout."})
 
 
 @app.route("/get-legal-insight", methods=["POST"])
