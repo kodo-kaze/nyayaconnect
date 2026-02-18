@@ -4,20 +4,32 @@ NyayaConnect is a comprehensive digital justice workflow platform designed to br
 
 ## 🚀 Key Features
 
-- **Role-Based Access Control (RBAC):** Tailored dashboards and permissions for Citizens, Police, Lawyers, Judges, and Admins.
-- **AI-Powered Assistance:** Automated complaint categorization, relevant law (IPC/BNS) suggestions, and case summarization.
+### 🏛️ Digital Justice Infrastructure
+- **Role-Based Access Control (RBAC):** Tailored dashboards and permissions for **Citizens, Police, Lawyers, Judges, and Admins**.
 - **Secure Evidence Vault:** SHA-256 hashed evidence storage to ensure data integrity and prevent tampering.
-- **Case Management Life-cycle:** End-to-end tracking from complaint filing to final verdict.
-- **Audit Logging:** Transparent tracking of all critical system actions for accountability.
+- **Case Lifecycle Management:** End-to-end tracking from initial complaint filing to final judicial verdict.
+- **Audit Logging:** Transparent tracking of all critical system actions for institutional accountability.
+
+### 🧠 AI-Powered Intelligence (NyayaAI)
+- **Automated Categorization:** AI analyzes complaint narratives to classify cases (Criminal, Civil, Family, etc.).
+- **Urgency Scoring:** Dynamic 1-10 priority scoring based on the severity of the incident.
+- **Legal Insights:** Suggestions for relevant **IPC (Indian Penal Code)** or **BNS (Bharatiya Nyaya Sanhita)** sections.
+- **Case Summarization:** AI-generated executive summaries for Judges to quickly review complex case descriptions.
+
+### 🎨 Modern User Experience
+- **Interactive Landing Page:** A professional, glassmorphism-inspired entry point for all users.
+- **Persistent Sessions:** Secure JWT-based authentication with 30-day persistence.
+- **Real-time Case Tracking:** Visual timelines for citizens to monitor their case progress.
+- **Unified Official Gateway:** Specialized portals for law enforcement and judicial officers.
 
 ## 🏗️ Architecture
 
-The platform is built using a microservices approach to ensure scalability and modularity:
+The platform follows a modular microservices approach for maximum scalability:
 
-1.  **Core Backend (`/backend`):** The central hub (Node.js/Express) managing authentication, RBAC, and case orchestration.
-2.  **AI Service (`/ai-service`):** A Python-based intelligence layer (Flask) for legal text analysis.
-3.  **Evidence Service (`/evidence-service`):** A dedicated storage and hashing service (Node.js) for handling sensitive case files.
-4.  **Frontend (`/frontend`):** A modern, responsive user interface (React/Vite/Tailwind CSS).
+1.  **Core Backend (`/backend`):** Node.js/Express hub managing authentication, RBAC, and case orchestration.
+2.  **AI Service (`/ai-service`):** Python/Flask intelligence layer utilizing the **meta/llama-3.1-405b-instruct** model via NVIDIA API.
+3.  **Evidence Service (`/evidence-service`):** Dedicated Node.js service for secure file handling and cryptographic hashing.
+4.  **Frontend (`/frontend`):** Modern React 19 application built with Vite and Tailwind CSS.
 
 ## 🛠️ Technology Stack
 
@@ -25,29 +37,28 @@ The platform is built using a microservices approach to ensure scalability and m
 | :--- | :--- |
 | **Frontend** | React 19, Vite, Tailwind CSS v4, Lucide React, Axios |
 | **Backend** | Node.js, Express, MongoDB (Mongoose), JWT, Bcrypt |
-| **AI Service** | Python 3, Flask, Flask-CORS |
+| **AI Service** | Python 3, Flask, OpenAI SDK, python-dotenv |
 | **Evidence** | Node.js, Multer, Crypto-js |
 | **Database** | MongoDB |
 
 ## 👥 User Roles & Workflow
 
-- **Citizen:** Can file complaints and track the real-time status of their cases.
-- **Police:** Investigates assigned cases, updates status, and uploads digital evidence.
-- **Lawyer:** Accesses case details and evidence to prepare and submit legal arguments.
-- **Judge:** Presides over cases, locks evidence to prevent changes, and issues final verdicts.
-- **Admin:** System overseer responsible for user management and assigning officials to cases.
+- **Citizen:** Files digital complaints, uploads initial evidence, and tracks real-time status.
+- **Police:** Manages investigations, records official diary entries, and uploads verified evidence.
+- **Lawyer:** Reviews case details and submits legal arguments for the defense or prosecution.
+- **Judge:** Reviews AI-summarized cases, examines evidence, and issues final digital verdicts.
+- **Admin:** Verifies official credentials (badges/bar IDs) and assigns personnel to active cases.
 
 ## 🚦 Getting Started
 
 ### Prerequisites
 
-- **Node.js** (v18+) and **npm**
-- **Python 3.x** and `pip`
-- **MongoDB** (Running locally or a URI for Atlas)
+- **Node.js** (v18+) & **npm**
+- **Python 3.x** & `pip`
+- **MongoDB** (Local instance or Atlas URI)
+- **NVIDIA AI API Key** (For NyayaAI features)
 
 ### Quick Start (All Services)
-
-The easiest way to start the entire platform is using the provided shell script:
 
 ```bash
 chmod +x run_all.sh
@@ -56,57 +67,53 @@ chmod +x run_all.sh
 
 ### Manual Service Setup
 
-If you prefer to run services individually:
-
 #### 1. Core Backend
 ```bash
 cd backend
 npm install
-npm run dev # Port 5000
+npm run dev # Runs on Port 5000
 ```
 
 #### 2. AI Service
 ```bash
 cd ai-service
-python -m venv venv
-source venv/bin/activate # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python app.py # Port 8000
+# Ensure NVIDIA_API_KEY is in .env
+python app.py # Runs on Port 8000
 ```
 
 #### 3. Evidence Service
 ```bash
 cd evidence-service
 npm install
-node index.js # Port 9000
+node index.js # Runs on Port 9000
 ```
 
 #### 4. Frontend
 ```bash
 cd frontend
 npm install
-npm run dev # Port 5173
+npm run dev # Runs on Port 5173
 ```
 
-## 🔐 Environment Variables
+## 🔐 Environment Configuration
 
 Ensure you create `.env` files in the respective service directories.
 
 **Backend (`/backend/.env`):**
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/justice_platform
-JWT_SECRET=your_super_secret_key
+MONGODB_URI=mongodb://localhost:27017/nyayaconnect
+JWT_SECRET=your_jwt_secret_here
 AI_SERVICE_URL=http://localhost:8000
 EVIDENCE_SERVICE_URL=http://localhost:9000
 ```
 
-## 📜 Development Conventions
-
-- **Security:** All evidence files are hashed upon upload; the hash is stored in MongoDB.
-- **Immutability:** Once a Judge "locks" a case, evidence cannot be modified.
-- **API Flow:** The Frontend primarily talks to the Core Backend, which proxies relevant requests to specialized services.
-- **Styling:** Follows a utility-first approach using Tailwind CSS.
+**AI Service (`/ai-service/.env`):**
+```env
+PORT=8000
+NVIDIA_API_KEY=your_nvidia_api_key_here
+```
 
 ---
-*Bridging the gap in the judicial system with technology.*
+*NyayaConnect — Bridging Fragmented Court Systems with Intelligent Infrastructure.*
