@@ -221,4 +221,17 @@ router.put('/aiOverride/:id', protect, authorize('ADMIN'), auditLog('AI_OVERRIDE
     }
 });
 
+// 7. AUDIT LOGS
+router.get('/logs', protect, authorize('ADMIN'), async (req, res) => {
+  try {
+    const logs = await Log.find({})
+      .populate('userId', 'name email role')
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

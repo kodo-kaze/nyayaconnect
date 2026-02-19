@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   ShieldCheck, 
@@ -16,16 +17,20 @@ import {
   Download,
   Activity,
   UserCheck,
-  Briefcase
+  Briefcase,
+  History,
+  Lock
 } from 'lucide-react';
 import Badge from '../components/Badge';
 import { API_BASE_URL } from '../api/config';
 
 const AdminDashboard = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [cases, setCases] = useState([]);
   const [workload, setWorkload] = useState([]);
-  const [caseEvidence, setCaseEvidence] = useState({});
+  const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('verification');
   const [selectedCase, setSelectedCase] = useState(null);
@@ -33,12 +38,17 @@ const AdminDashboard = () => {
   const [modalType, setModalType] = useState(null);
   const [formData, setFormData] = useState({});
 
-  useEffect(() => {
-    fetchData();
-    fetchWorkload();
+  const fetchEvidence = useCallback(async (caseId) => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
+      await axios.get(`${API_BASE_URL}/evidence/${caseId}`, config);
+    } catch (error) {
+      console.error('Error fetching evidence:', error);
+    }
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
@@ -56,9 +66,20 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchEvidence]);
 
-  const fetchWorkload = async () => {
+  const fetchLogs = useCallback(async () => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
+      const res = await axios.get(`${API_BASE_URL}/admin/logs`, config);
+      setLogs(res.data);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    }
+  }, []);
+
+  const fetchWorkload = useCallback(async () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
@@ -67,18 +88,25 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching workload:', error);
     }
-  };
+  }, []);
 
-  const fetchEvidence = async (caseId) => {
-    try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
-      const config = { headers: { Authorization: `Bearer ${storedUser.token}` } };
-      const res = await axios.get(`${API_BASE_URL}/evidence/${caseId}`, config);
-      setCaseEvidence(prev => ({ ...prev, [caseId]: res.data }));
-    } catch (error) {
-      console.error('Error fetching evidence:', error);
+  useEffect(() => {
+    // Set active tab based on path
+    const path = location.pathname;
+    if (path.includes('/admin/assign')) setActiveTab('assign');
+    else if (path.includes('/admin/workload')) setActiveTab('workload');
+    else if (path.includes('/admin/users')) setActiveTab('users');
+    else if (path.includes('/admin/logs')) setActiveTab('logs');
+    else setActiveTab('verification');
+  }, [location]);
+
+  useEffect(() => {
+    fetchData();
+    fetchWorkload();
+    if (activeTab === 'logs') {
+      fetchLogs();
     }
-  };
+  }, [activeTab, fetchData, fetchWorkload, fetchLogs]);
 
   const handleCaseAction = async (caseId, action, data = {}) => {
     try {
@@ -125,9 +153,10 @@ const AdminDashboard = () => {
 
   const tabs = [
     { id: 'verification', label: 'Verification Queue', icon: UserCheck },
-    { id: 'assignment', label: 'Case Assignment', icon: Briefcase },
+    { id: 'assign', label: 'Assign Authorities', icon: Briefcase },
     { id: 'workload', label: 'Agency Workload', icon: Activity },
     { id: 'users', label: 'Authority Management', icon: ShieldCheck },
+    { id: 'logs', label: 'Audit Logs', icon: History },
   ];
 
   return (
@@ -143,7 +172,10 @@ const AdminDashboard = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              if (tab.id === 'verification') navigate('/admin');
+              else navigate(`/admin/${tab.id}`);
+            }}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative ${
               activeTab === tab.id 
                 ? 'text-primary' 
@@ -224,7 +256,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'assignment' && (
+          {activeTab === 'assign' && (
             <div className="grid gap-6">
               {cases.filter(c => ['REGISTERED', 'INVESTIGATING', 'ASSIGNED', 'TRIAL', 'SCHEDULED'].includes(c.status)).map(c => (
                 <div key={c._id} className="card p-6">
@@ -451,7 +483,7 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {users.map(u => (
+                  {users.filter(u => u.role !== 'CITIZEN').map(u => (
                     <tr key={u._id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button 
@@ -485,6 +517,68 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {activeTab === 'logs' && (
+            <div className="card overflow-hidden">
+              <div className="bg-slate-50 border-b border-slate-100 p-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  System Audit Trail
+                </h3>
+                <div className="flex items-center gap-2">
+                   <button onClick={fetchLogs} className="btn btn-secondary text-xs h-8">
+                     <Activity className="h-3 w-3 mr-1" /> Refresh
+                   </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Timestamp</th>
+                      <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Authority</th>
+                      <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Action</th>
+                      <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                      <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {logs.map((log) => (
+                      <tr key={log._id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-[11px] text-slate-500 font-medium">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                              {(log.userId?.name || log.userId?.email || 'S').substring(0,1).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="text-[11px] font-bold text-slate-900">{log.userId?.name || 'System'}</div>
+                              <div className="text-[9px] text-slate-400 font-bold uppercase">{log.userId?.role || 'Guest'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-[11px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge status={log.status === 'SUCCESS' ? 'success' : 'danger'}>
+                            {log.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[10px] text-slate-400 font-mono">
+                          {log.ipAddress} | {log.userAgent?.substring(0, 20)}...
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

@@ -86,6 +86,34 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/admin/assign" element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <Layout>
+                <AdminDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/workload" element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <Layout>
+                <AdminDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <Layout>
+                <AdminDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/logs" element={
+            <ProtectedRoute roles={['ADMIN']}>
+              <Layout>
+                <AdminDashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
