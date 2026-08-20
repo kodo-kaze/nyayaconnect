@@ -52,6 +52,193 @@ The platform follows a modular microservices approach for maximum scalability:
 - **Judge:** Reviews AI-summarized cases, examines evidence, and issues final digital verdicts.
 - **Admin:** Verifies official credentials (badges/bar IDs) and assigns personnel to active cases.
 
+# 🔌 NyayaConnect API Documentation
+
+Base URL:
+
+```text
+http://localhost:5000
+```
+
+Protected routes require:
+
+```http
+Authorization: Bearer <JWT_TOKEN>
+```
+
+JWT tokens expire after **30 days**.
+
+---
+
+## 🔐 Authentication
+
+| Method | Endpoint                  | Access | Description                     |
+| ------ | ------------------------- | ------ | ------------------------------- |
+| `POST` | `/auth/register/citizen`  | Public | Register citizen & generate OTP |
+| `POST` | `/auth/register/official` | Public | Register Police/Lawyer/Judge    |
+| `POST` | `/auth/resend-otp`        | Public | Resend OTP                      |
+| `POST` | `/auth/reset-password`    | Public | Reset password                  |
+| `POST` | `/auth/login`             | Public | Unified login with JWT/OTP      |
+
+---
+
+## ⚖️ Case Management
+
+| Method | Endpoint            | Access             | Description             |
+| ------ | ------------------- | ------------------ | ----------------------- |
+| `POST` | `/cases/create`     | Citizen/Admin      | Create a new case       |
+| `GET`  | `/cases/my`         | Authenticated      | Get role-specific cases |
+| `GET`  | `/cases/:id`        | Authenticated      | Get case details        |
+| `PUT`  | `/cases/status/:id` | Police/Judge/Admin | Update case status      |
+| `PUT`  | `/cases/assign/:id` | Admin              | Assign officials        |
+
+---
+
+## 🧠 NyayaAI
+
+| Method | Endpoint               | Description                              |
+| ------ | ---------------------- | ---------------------------------------- |
+| `POST` | `/ai/analyzeComplaint` | Categorize complaint & calculate urgency |
+| `POST` | `/ai/summarizeCase`    | Generate case summary                    |
+| `POST` | `/ai/legalInsight`     | Generate legal insights                  |
+
+Example:
+
+```json
+{
+  "complaint_text": "The accused threatened the complainant."
+}
+```
+
+---
+
+## 🔐 Evidence
+
+| Method | Endpoint            | Access                      | Description            |
+| ------ | ------------------- | --------------------------- | ---------------------- |
+| `POST` | `/evidence/upload`  | Citizen/Police/Lawyer/Admin | Upload & hash evidence |
+| `GET`  | `/evidence/:caseId` | Authenticated               | Get case evidence      |
+
+Upload uses:
+
+```text
+multipart/form-data
+file=<file>
+caseId=<case_id>
+```
+
+Evidence is processed by the dedicated Evidence Service and stored with a cryptographic hash.
+
+---
+
+## 👮 Police Investigation
+
+| Method | Endpoint                           | Description                   |
+| ------ | ---------------------------------- | ----------------------------- |
+| `POST` | `/police/:id/diary`                | Add investigation diary entry |
+| `POST` | `/police/:id/suspects`             | Add suspect                   |
+| `PUT`  | `/police/:id/evidence/:evidenceId` | Mark evidence relevance       |
+| `PUT`  | `/police/:id/status`               | Update investigation status   |
+
+Allowed investigation statuses:
+
+```text
+INVESTIGATING
+REPORT_SUBMITTED
+```
+
+Only the assigned Police Officer can modify the investigation.
+
+---
+
+## 👑 Admin
+
+| Method | Endpoint                    | Description                    |
+| ------ | --------------------------- | ------------------------------ |
+| `POST` | `/admin/users/create-judge` | Create Judge account           |
+| `GET`  | `/admin/users`              | Manage users                   |
+| `PUT`  | `/admin/users/status/:id`   | Approve/Suspend user           |
+| `PUT`  | `/admin/verifyCase/:id`     | Approve/Reject case            |
+| `GET`  | `/admin/report/:id`         | Download case PDF              |
+| `PUT`  | `/admin/assign/:id`         | Assign Police/Judge/Prosecutor |
+| `GET`  | `/admin/workload`           | Monitor official workload      |
+| `PUT`  | `/admin/autoAssign/:id`     | AI-assisted auto assignment    |
+| `PUT`  | `/admin/aiOverride/:id`     | Override AI classification     |
+| `GET`  | `/admin/logs`               | View audit logs                |
+
+---
+
+## 🛡️ Authorization
+
+NyayaConnect uses **JWT authentication + Role-Based Access Control (RBAC)**.
+
+Supported roles:
+
+```text
+CITIZEN
+POLICE
+LAWYER
+JUDGE
+ADMIN
+```
+
+Critical operations are recorded through the audit logging system.
+
+---
+
+## 🔄 Case Flow
+
+```text
+Citizen
+   ↓
+PENDING_VERIFICATION
+   ↓
+Admin Verification
+   ↓
+REGISTERED
+   ↓
+ASSIGNED
+   ↓
+INVESTIGATING
+   ↓
+REPORT_SUBMITTED
+   ↓
+TRIAL
+   ↓
+Final Verdict
+```
+
+---
+
+## 🏗️ Microservices
+
+```text
+React Frontend
+      ↓
+Node.js / Express API
+      ├── MongoDB
+      ├── NyayaAI Service
+      └── Evidence Service
+```
+
+### Internal Services
+
+```text
+AI Service
+POST /predict-category
+POST /summarize
+POST /get-legal-insight
+
+Evidence Service
+POST /upload
+```
+
+---
+
+> **Note:** Exact production URLs and router prefixes depend on the `app.use()` configuration in `server.js`.
+
+
+
 ## 🔗 Links
 
 | Resource                    | Link                                                                |
